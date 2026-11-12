@@ -7,12 +7,47 @@ const ai = new GoogleGenAI();
 
 const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Función de respaldo con Groq (servidores independientes de Google)
 async function generarConGroq(prompt) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     throw new Error("No hay clave GROQ_API_KEY configurada para respaldo.");
   }
+
+  const resModelos = await fetch("https://api.groq.com/openai/v1/models", {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+
+  if (!resModelos.ok) {
+    throw new Error(`No se pudieron listar los modelos de Groq (${resModelos.status})`);
+  }
+
+  const listaData = await resModelos.json();
+  const idsDisponibles = (listaData.data || []).map((m) => m.id);
+
+  const candidatosTexto = idsDisponibles.filter(
+    (id) =>
+      !id.includes("whisper") &&
+      !id.includes("guard") &&
+      !id.includes("tts") &&
+      !id.includes("prompt")
+  );
+
+  const preferencias = ["llama-4", "llama-3.3", "llama-3.1-70b", "qwen", "llama-3.1-8b"];
+  let modeloElegido = candidatosTexto[0];
+
+  for (const pref of preferencias) {
+    const encontrado = candidatosTexto.find((id) => id.toLowerCase().includes(pref));
+    if (encontrado) {
+      modeloElegido = encontrado;
+      break;
+    }
+  }
+
+  if (!modeloElegido) {
+    throw new Error("No se encontró ningún modelo de texto activo en Groq.");
+  }
+
+  console.log(`2d. Usando modelo activo de Groq: ${modeloElegido}`);
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -21,7 +56,7 @@ async function generarConGroq(prompt) {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: modeloElegido,
       temperature: 0.7,
       response_format: { type: "json_object" },
       messages: [
@@ -105,29 +140,27 @@ export async function POST(request) {
       thinkingConfig: { thinkingBudget: 0 },
     };
 
-    // Lista de modelos de Gemini a intentar en orden
-    const modelosGemini = ["gemini-3.8-flash", "gemini-3-flash-preview"];
+    try {
+      console.log("2. Intentando con gemini-3.8-flash...");
+      const promesaGemini = ai.models.generateContent({
+        model: "gemini-3.8-flash",
+        contents: prompt,
+        config: configuracion,
+      });
 
-    for (let i = 0; i < modelosGemini.length; i++) {
-      const modelo = modelosGemini[i];
-      try {
-        console.log(`2. Intentando con ${modelo}...`);
-        const response = await ai.models.generateContent({
-          model: modelo,
-          contents: prompt,
-          config: configuracion,
-        });
-        console.log(`3. Éxito con ${modelo}.`);
-        return NextResponse.json(JSON.parse(response.text || "{}"));
-      } catch (err) {
-        console.warn(`Fallo en ${modelo} (status: ${err.status}). Pasando al siguiente...`);
-        await esperar(1000);
-        continue;
-      }
+      const promesaTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject({ status: 503, message: "Timeout Gemini" }), 15000)
+      );
+
+      const response = await Promise.race([promesaGemini, promesaTimeout]);
+      console.log("3. Éxito con gemini-3.8-flash.");
+      return NextResponse.json(JSON.parse(response.text || "{}"));
+    } catch (err) {
+      console.warn(`Gemini no disponible (${err.status || err.message}). Saltando a Groq...`);
+      await esperar(500);
     }
 
-    // Si todos los modelos de Gemini fallan o están saturados, activamos Groq automáticamente
-    console.log("2c. Gemini no disponible. Usando servidor de respaldo Groq (Llama 3.3)...");
+    console.log("2c. Usando servidor de respaldo Groq...");
     const resultadoGroq = await generarConGroq(prompt);
     console.log("3. Éxito con respaldo Groq.");
     return NextResponse.json(resultadoGroq);
