@@ -453,89 +453,146 @@ export default function GeneradorLectura() {
               </div>
             </div>
 
-            {/* Encabezado Oficial (solo aparece al exportar a PDF / imprimir) */}
-            <div className="hidden print:block border-b-2 border-gray-800 pb-4 mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-bold text-lg uppercase tracking-wide">
-                  IESO Sierra la Mesta
-                </span>
-                <span className="text-sm text-gray-600">
-                  Actividad de Comprensión Lectora
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-4 text-sm pt-2">
-                <div className="col-span-2">
-                  <strong>Nombre y apellidos:</strong> ________________________________________
-                </div>
-                <div>
-                  <strong>Curso / Fecha:</strong> _______________
-                </div>
-              </div>
-            </div>
-
-            {/* Título y Cuerpo del Texto */}
+            {/* BLOQUE 1 (PDF): FICHA PARA EL ALUMNADO */}
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 text-slate-900 print:text-2xl print:mb-4">
-                {resultado.titulo}
-              </h2>
-              <div className="whitespace-pre-line leading-relaxed text-base sm:text-lg text-slate-700 text-justify bg-slate-50/60 p-6 rounded-xl border border-slate-100 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black">
-                {resultado.texto}
+              {/* Encabezado Oficial Alumnado (solo aparece al exportar a PDF / imprimir) */}
+              <div className="hidden print:block border-b-2 border-gray-800 pb-4 mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold text-lg uppercase tracking-wide">
+                    IESO Sierra la Mesta
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    Actividad de Comprensión Lectora
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-sm pt-2">
+                  <div className="col-span-2">
+                    <strong>Nombre y apellidos:</strong> ________________________________________
+                  </div>
+                  <div>
+                    <strong>Curso / Fecha:</strong> _______________
+                  </div>
+                </div>
               </div>
+
+              {/* Título y Cuerpo del Texto */}
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 text-slate-900 print:text-2xl print:mb-4">
+                  {resultado.titulo}
+                </h2>
+                <div className="whitespace-pre-line leading-relaxed text-base sm:text-lg text-slate-700 text-justify bg-slate-50/60 p-6 rounded-xl border border-slate-100 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black">
+                  {resultado.texto}
+                </div>
+              </div>
+
+              <hr className="border-slate-200 my-6 print:border-gray-300" />
+
+              {/* Preguntas Literales (en PDF siempre salen limpias con líneas para el alumno) */}
+              {resultado.preguntas_literales?.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-blue-700 bg-blue-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
+                    1. Comprensión Literal
+                  </h3>
+                  <ol className="list-decimal pl-5 space-y-5">
+                    {resultado.preguntas_literales.map((item, i) => (
+                      <li key={i} className="break-inside-avoid">
+                        <p className="font-medium text-slate-900">{item.pregunta}</p>
+                        {mostrarRespuestas && (
+                          <p className="text-emerald-800 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:hidden">
+                            <strong>Respuesta:</strong> {item.respuesta}
+                          </p>
+                        )}
+                        <div className="hidden print:block mt-3 space-y-5">
+                          <div className="border-b border-gray-400 h-4"></div>
+                          <div className="border-b border-gray-400 h-4"></div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {/* Preguntas Inferenciales (en PDF siempre salen limpias con líneas para el alumno) */}
+              {resultado.preguntas_inferenciales?.length > 0 && (
+                <div className="space-y-4 pt-6">
+                  <h3 className="text-sm font-bold text-indigo-700 bg-indigo-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
+                    2. Comprensión Inferencial
+                  </h3>
+                  <ol className="list-decimal pl-5 space-y-5">
+                    {resultado.preguntas_inferenciales.map((item, i) => (
+                      <li key={i} className="break-inside-avoid">
+                        <p className="font-medium text-slate-900">{item.pregunta}</p>
+                        {mostrarRespuestas && (
+                          <p className="text-emerald-800 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:hidden">
+                            <strong>Respuesta:</strong> {item.respuesta}
+                          </p>
+                        )}
+                        <div className="hidden print:block mt-3 space-y-5">
+                          <div className="border-b border-gray-400 h-4"></div>
+                          <div className="border-b border-gray-400 h-4"></div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
             </div>
 
-            <hr className="border-slate-200 print:border-gray-300" />
+            {/* BLOQUE 2 (SOLO PDF): SOLUCIONARIO EN HOJA APARTE PARA EL DOCENTE */}
+            <div className="hidden print:block print:break-before-page">
+              {/* Encabezado Oficial Docente */}
+              <div className="border-b-2 border-gray-800 pb-3 mb-6">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-lg uppercase tracking-wide">
+                    IESO Sierra la Mesta
+                  </span>
+                  <span className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+                    Solucionario para el Docente
+                  </span>
+                </div>
+                <p className="text-base font-bold text-black mt-2">
+                  Lectura: {resultado.titulo}
+                </p>
+              </div>
 
-            {/* Preguntas Literales */}
-            {resultado.preguntas_literales?.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold text-blue-700 bg-blue-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
-                  1. Comprensión Literal
-                </h3>
-                <ol className="list-decimal pl-5 space-y-5">
-                  {resultado.preguntas_literales.map((item, i) => (
-                    <li key={i} className="break-inside-avoid">
-                      <p className="font-medium text-slate-900">{item.pregunta}</p>
-                      {mostrarRespuestas ? (
-                        <p className="text-emerald-800 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:bg-transparent print:border-none print:p-0 print:mt-1 print:italic print:text-black">
+              {/* Soluciones Literales */}
+              {resultado.preguntas_literales?.length > 0 && (
+                <div className="space-y-3 mb-6">
+                  <h3 className="text-base font-bold uppercase tracking-wider text-black">
+                    1. Soluciones — Comprensión Literal
+                  </h3>
+                  <ol className="list-decimal pl-5 space-y-4">
+                    {resultado.preguntas_literales.map((item, i) => (
+                      <li key={i} className="break-inside-avoid text-sm">
+                        <p className="font-bold text-black">{item.pregunta}</p>
+                        <p className="text-gray-800 mt-1">
                           <strong>Respuesta:</strong> {item.respuesta}
                         </p>
-                      ) : (
-                        <div className="hidden print:block mt-3 space-y-5">
-                          <div className="border-b border-gray-400 h-4"></div>
-                          <div className="border-b border-gray-400 h-4"></div>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
 
-            {/* Preguntas Inferenciales */}
-            {resultado.preguntas_inferenciales?.length > 0 && (
-              <div className="space-y-4 pt-2">
-                <h3 className="text-sm font-bold text-indigo-700 bg-indigo-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
-                  2. Comprensión Inferencial
-                </h3>
-                <ol className="list-decimal pl-5 space-y-5">
-                  {resultado.preguntas_inferenciales.map((item, i) => (
-                    <li key={i} className="break-inside-avoid">
-                      <p className="font-medium text-slate-900">{item.pregunta}</p>
-                      {mostrarRespuestas ? (
-                        <p className="text-emerald-800 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:bg-transparent print:border-none print:p-0 print:mt-1 print:italic print:text-black">
+              {/* Soluciones Inferenciales */}
+              {resultado.preguntas_inferenciales?.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-base font-bold uppercase tracking-wider text-black">
+                    2. Soluciones — Comprensión Inferencial
+                  </h3>
+                  <ol className="list-decimal pl-5 space-y-4">
+                    {resultado.preguntas_inferenciales.map((item, i) => (
+                      <li key={i} className="break-inside-avoid text-sm">
+                        <p className="font-bold text-black">{item.pregunta}</p>
+                        <p className="text-gray-800 mt-1">
                           <strong>Respuesta:</strong> {item.respuesta}
                         </p>
-                      ) : (
-                        <div className="hidden print:block mt-3 space-y-5">
-                          <div className="border-b border-gray-400 h-4"></div>
-                          <div className="border-b border-gray-400 h-4"></div>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
           </section>
         )}
       </main>
