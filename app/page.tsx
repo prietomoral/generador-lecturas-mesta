@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface Pregunta {
   pregunta: string;
@@ -32,6 +32,9 @@ export default function GeneradorLectura() {
   const [cargando, setCargando] = useState(false);
   const [segundosRestantes, setSegundosRestantes] = useState(TIEMPO_LIMITE_SEGUNDOS);
   const [mostrarRespuestas, setMostrarRespuestas] = useState(false);
+  const [avisoExito, setAvisoExito] = useState(false);
+
+  const seccionResultadoRef = useRef<HTMLElement | null>(null);
 
   // Efecto para la cuenta atrás en tiempo real mientras carga
   useEffect(() => {
@@ -47,11 +50,50 @@ export default function GeneradorLectura() {
     return () => clearInterval(intervalo);
   }, [cargando]);
 
+  // Efecto para avisar, sonar y hacer scroll automático al terminar
+  useEffect(() => {
+    if (!resultado) return;
+
+    // 1. Mostrar banner de aviso durante 6 segundos
+    setAvisoExito(true);
+    const timerAviso = setTimeout(() => setAvisoExito(false), 6000);
+
+    // 2. Desplazar suavemente la pantalla hasta la ficha generada
+    setTimeout(() => {
+      seccionResultadoRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
+
+    // 3. Emitir un tono suave de aviso (sin archivos externos)
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // Nota Re5
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // Sube a La5
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+    } catch {
+      // Si el navegador bloquea el audio automático, continúa sin error
+    }
+
+    return () => clearTimeout(timerAviso);
+  }, [resultado]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSegundosRestantes(TIEMPO_LIMITE_SEGUNDOS);
     setCargando(true);
     setResultado(null);
+    setAvisoExito(false);
 
     const tipoTextoFinal =
       form.tipoTextoSelect === "Otro" ? form.tipoTextoOtro : form.tipoTextoSelect;
@@ -74,13 +116,14 @@ export default function GeneradorLectura() {
         throw new Error(data.error || "Error en la respuesta del servidor");
       }
       setResultado(data);
-    } catch (err: any) {
-      if (err.name === "AbortError") {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
         alert(
           `La petición tardó demasiado (más de ${TIEMPO_LIMITE_SEGUNDOS}s). Inténtalo de nuevo.`
         );
       } else {
-        alert("Error: " + (err.message || "No se pudo generar la lectura."));
+        const mensaje = err instanceof Error ? err.message : "No se pudo generar la lectura.";
+        alert("Error: " + mensaje);
       }
     } finally {
       clearTimeout(temporizador);
@@ -406,7 +449,31 @@ export default function GeneradorLectura() {
 
         {/* Resultado / Ficha Imprimible */}
         {resultado && (
-          <section className="mt-8 bg-white p-6 sm:p-10 rounded-2xl shadow-lg shadow-slate-200/70 border border-slate-200/80 space-y-6 print:mt-0 print:p-0 print:shadow-none print:border-none">
+          <section
+            ref={seccionResultadoRef}
+            className="mt-8 bg-white p-6 sm:p-10 rounded-2xl shadow-lg shadow-slate-200/70 border border-slate-200/80 space-y-6 scroll-mt-6 print:mt-0 print:p-0 print:shadow-none print:border-none"
+          >
+            {/* Aviso visual de confirmación al terminar (solo pantalla) */}
+            {avisoExito && (
+              <div className="flex items-center justify-between gap-3 bg-emerald-50 border border-emerald-300 text-emerald-900 px-4 py-3 rounded-xl shadow-sm print:hidden">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white text-xs font-bold">
+                    ✓
+                  </span>
+                  <div className="text-sm">
+                    <strong>¡Actividad generada correctamente!</strong> Ya puedes revisarla o descargarla en PDF.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAvisoExito(false)}
+                  className="text-emerald-700 hover:text-emerald-950 text-xs font-bold px-2 py-1 cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
+            )}
+
             {/* Barra de herramientas superior (solo visible en pantalla, oculta en PDF) */}
             <div className="flex flex-wrap justify-between items-center gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 print:hidden">
               <div className="flex items-center gap-2 text-sm text-slate-600">
