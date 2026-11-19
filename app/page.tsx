@@ -15,6 +15,32 @@ interface ResultadoLectura {
 
 const TIEMPO_LIMITE_SEGUNDOS = 200;
 
+const TEMAS_ALEATORIOS = [
+  "La biodiversidad de la dehesa extremeña y el Parque Nacional de Monfragüe",
+  "Un misterio nocturno en la biblioteca del instituto",
+  "Cómo funciona la inteligencia artificial en nuestra vida cotidiana",
+  "El viaje de una gota de agua desde el río Guadiana hasta el océano",
+  "La historia del teatro romano de Mérida y los espectáculos de la antigüedad",
+  "El impacto de las redes sociales y la huella digital en la adolescencia",
+  "La primera expedición científica a la Antártida",
+  "El secreto de las abejas y su papel en los ecosistemas",
+  "Una carta encontrada dentro de un libro antiguo en Cáceres",
+  "Energías renovables: cómo el sol y el viento generan electricidad",
+  "El origen de los Juegos Olímpicos y los valores del deporte",
+  "Un día en la vida de un adolescente en el año 2126",
+  "La importancia del sueño y el descanso para el cerebro",
+  "Los grandes inventos que cambiaron la historia de la comunicación",
+  "La ruta de la trashumancia por las cañadas reales de Extremadura",
+];
+
+function obtenerTemaAleatorio(excluir?: string): string {
+  const disponibles = excluir
+    ? TEMAS_ALEATORIOS.filter((t) => t !== excluir)
+    : TEMAS_ALEATORIOS;
+  const indice = Math.floor(Math.random() * disponibles.length);
+  return disponibles[indice];
+}
+
 export default function GeneradorLectura() {
   const [form, setForm] = useState({
     edad: "12-14 años (1º-2º ESO)",
@@ -35,6 +61,14 @@ export default function GeneradorLectura() {
   const [avisoExito, setAvisoExito] = useState(false);
 
   const seccionResultadoRef = useRef<HTMLElement | null>(null);
+
+  // Rellena un tema aleatorio en el cliente al cargar para evitar errores de hidratación SSR
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      tematica: prev.tematica || obtenerTemaAleatorio(),
+    }));
+  }, []);
 
   // Efecto para la cuenta atrás en tiempo real mientras carga
   useEffect(() => {
@@ -68,7 +102,9 @@ export default function GeneradorLectura() {
 
     // 3. Emitir un tono suave de aviso (sin archivos externos)
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const ctx = new AudioCtx();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -292,9 +328,35 @@ export default function GeneradorLectura() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Tema principal de la lectura <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Tema principal de la lectura <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          tematica: obtenerTemaAleatorio(prev.tematica),
+                        }))
+                      }
+                      className="text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-lg transition cursor-pointer"
+                    >
+                      🎲 Otro tema aleatorio
+                    </button>
+                    {form.tematica && (
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, tematica: "" }))}
+                        className="text-xs font-medium text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg transition cursor-pointer"
+                        title="Vaciar campo para escribir un tema propio"
+                      >
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <input
                   type="text"
                   required
