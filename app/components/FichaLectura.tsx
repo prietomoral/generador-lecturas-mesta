@@ -1,0 +1,225 @@
+"use client";
+
+import React, { useState } from "react";
+import { ResultadoLectura } from "../types/lectura";
+
+interface FichaLecturaProps {
+  resultado: ResultadoLectura;
+  avisoExito: boolean;
+  onCerrarAviso: () => void;
+  onAbrirCorrector: () => void;
+  seccionRef: React.RefObject<HTMLElement | null>;
+}
+
+export default function FichaLectura({
+  resultado,
+  avisoExito,
+  onCerrarAviso,
+  onAbrirCorrector,
+  seccionRef,
+}: FichaLecturaProps) {
+  const [mostrarRespuestas, setMostrarRespuestas] = useState(false);
+
+  return (
+    <section
+      ref={seccionRef}
+      className="mt-8 bg-white p-6 sm:p-10 rounded-2xl shadow-lg shadow-slate-200/70 border border-slate-200/80 space-y-6 scroll-mt-6 print:mt-0 print:p-0 print:shadow-none print:border-none"
+    >
+      {/* Aviso visual de confirmación */}
+      {avisoExito && (
+        <div className="flex items-center justify-between gap-3 bg-emerald-50 border border-emerald-300 text-emerald-900 px-4 py-3 rounded-xl shadow-sm print:hidden">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white text-xs font-bold">
+              ✓
+            </span>
+            <div className="text-sm">
+              <strong>¡Actividad generada correctamente!</strong> Ya puedes revisarla, descargarla en PDF o corregir respuestas.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCerrarAviso}
+            className="text-emerald-700 hover:text-emerald-950 text-xs font-bold px-2 py-1 cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
+      {/* Barra de herramientas superior */}
+      <div className="flex flex-wrap justify-between items-center gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 print:hidden">
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <span
+            className={`w-2.5 h-2.5 rounded-full ${
+              mostrarRespuestas ? "bg-emerald-500" : "bg-blue-500"
+            }`}
+          />
+          <span>
+            Vista:{" "}
+            <strong className="text-slate-900">
+              {mostrarRespuestas ? "Ficha Profesor (con soluciones)" : "Ficha Alumnado"}
+            </strong>
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onAbrirCorrector}
+            className="text-sm bg-indigo-700 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition cursor-pointer"
+          >
+            ✍️ Abrir ventana de corrección IA
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMostrarRespuestas(!mostrarRespuestas)}
+            className="text-sm bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 px-3.5 py-2 rounded-lg font-medium transition cursor-pointer"
+          >
+            {mostrarRespuestas ? "Ocultar Solucionario" : "Ver Solucionario"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="text-sm bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-semibold shadow-sm transition cursor-pointer"
+          >
+            🖨️ Descargar PDF
+          </button>
+        </div>
+      </div>
+
+      {/* BLOQUE 1: FICHA PARA EL ALUMNADO */}
+      <div>
+        <div className="hidden print:block border-b-2 border-gray-800 pb-4 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <span className="font-bold text-lg uppercase tracking-wide">
+              IESO Sierra la Mesta
+            </span>
+            <span className="text-sm text-gray-600">Actividad de Comprensión Lectora</span>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-sm pt-2">
+            <div className="col-span-2">
+              <strong>Nombre y apellidos:</strong> ________________________________________
+            </div>
+            <div>
+              <strong>Curso / Fecha:</strong> _______________
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 text-slate-900 print:text-2xl print:mb-4">
+            {resultado.titulo}
+          </h2>
+          <div className="whitespace-pre-line leading-relaxed text-base sm:text-lg text-slate-700 text-justify bg-slate-50/60 p-6 rounded-xl border border-slate-100 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black">
+            {resultado.texto}
+          </div>
+        </div>
+
+        <hr className="border-slate-200 my-6 print:border-gray-300" />
+
+        {resultado.preguntas_literales?.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-blue-700 bg-blue-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
+              1. Comprensión Literal
+            </h3>
+            <ol className="list-decimal pl-5 space-y-5">
+              {resultado.preguntas_literales.map((item, i) => (
+                <li key={i} className="break-inside-avoid">
+                  <p className="font-medium text-slate-900">{item.pregunta}</p>
+                  {mostrarRespuestas && (
+                    <p className="text-emerald-800 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:hidden">
+                      <strong>Respuesta:</strong> {item.respuesta}
+                    </p>
+                  )}
+                  <div className="hidden print:block mt-3 space-y-5">
+                    <div className="border-b border-gray-400 h-4" />
+                    <div className="border-b border-gray-400 h-4" />
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {resultado.preguntas_inferenciales?.length > 0 && (
+          <div className="space-y-4 pt-6">
+            <h3 className="text-sm font-bold text-indigo-700 bg-indigo-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
+              2. Comprensión Inferencial
+            </h3>
+            <ol className="list-decimal pl-5 space-y-5">
+              {resultado.preguntas_inferenciales.map((item, i) => (
+                <li key={i} className="break-inside-avoid">
+                  <p className="font-medium text-slate-900">{item.pregunta}</p>
+                  {mostrarRespuestas && (
+                    <p className="text-emerald-800 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:hidden">
+                      <strong>Respuesta:</strong> {item.respuesta}
+                    </p>
+                  )}
+                  <div className="hidden print:block mt-3 space-y-5">
+                    <div className="border-b border-gray-400 h-4" />
+                    <div className="border-b border-gray-400 h-4" />
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
+
+      {/* BLOQUE 2 (SOLO PDF): SOLUCIONARIO EN HOJA APARTE */}
+      <div className="hidden print:block print:break-before-page">
+        <div className="border-b-2 border-gray-800 pb-3 mb-6">
+          <div className="flex justify-between items-center">
+            <span className="font-bold text-lg uppercase tracking-wide">
+              IESO Sierra la Mesta
+            </span>
+            <span className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+              Solucionario para el Docente
+            </span>
+          </div>
+          <p className="text-base font-bold text-black mt-2">
+            Lectura: {resultado.titulo}
+          </p>
+        </div>
+
+        {resultado.preguntas_literales?.length > 0 && (
+          <div className="space-y-3 mb-6">
+            <h3 className="text-base font-bold uppercase tracking-wider text-black">
+              1. Soluciones — Comprensión Literal
+            </h3>
+            <ol className="list-decimal pl-5 space-y-4">
+              {resultado.preguntas_literales.map((item, i) => (
+                <li key={i} className="break-inside-avoid text-sm">
+                  <p className="font-bold text-black">{item.pregunta}</p>
+                  <p className="text-gray-800 mt-1">
+                    <strong>Respuesta:</strong> {item.respuesta}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {resultado.preguntas_inferenciales?.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-base font-bold uppercase tracking-wider text-black">
+              2. Soluciones — Comprensión Inferencial
+            </h3>
+            <ol className="list-decimal pl-5 space-y-4">
+              {resultado.preguntas_inferenciales.map((item, i) => (
+                <li key={i} className="break-inside-avoid text-sm">
+                  <p className="font-bold text-black">{item.pregunta}</p>
+                  <p className="text-gray-800 mt-1">
+                    <strong>Respuesta:</strong> {item.respuesta}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
