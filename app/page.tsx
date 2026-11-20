@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FormLectura, ResultadoLectura, TEMAS_ALEATORIOS } from "./types/lectura";
+import { FormLectura, ResultadoLectura, obtenerTemaAleatorio } from "./types/lectura";
 import FormularioLectura from "./components/FormularioLectura";
 import FichaLectura from "./components/FichaLectura";
 import VentanaCorrector from "./components/VentanaCorrector";
@@ -10,16 +10,27 @@ const TIEMPO_LIMITE_SEGUNDOS = 200;
 
 export default function GeneradorLectura() {
   const [form, setForm] = useState<FormLectura>({
+    modoOrigen: "generar",
+    tituloPropio: "",
+    textoPropio: "",
     edad: "12-14 años (1º-2º ESO)",
     tipoTextoSelect: "Narrativo (cuento o relato)",
     tipoTextoOtro: "",
     dificultad: "Media",
     extension: "Media (250 - 350 palabras)",
-    tematica: TEMAS_ALEATORIOS[0],
+    tematica: "La biodiversidad de la dehesa extremeña y el Parque Nacional de Monfragüe",
     saberes: "",
     numLiterales: 3,
     numInferenciales: 2,
   });
+
+  // Al cargar en el navegador, elige un tema aleatorio no repetido
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      tematica: obtenerTemaAleatorio(),
+    }));
+  }, []);
 
   const [resultado, setResultado] = useState<ResultadoLectura | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -99,7 +110,18 @@ export default function GeneradorLectura() {
       if (!res.ok || data.error) {
         throw new Error(data.error || "Error en la respuesta del servidor");
       }
-      setResultado(data);
+
+      // Doble garantía: si se subió/pegó texto propio, se mantiene íntegro
+      const resultadoFinal: ResultadoLectura =
+        form.modoOrigen === "subir" && form.textoPropio?.trim()
+          ? {
+              ...data,
+              titulo: form.tituloPropio?.trim() || data.titulo,
+              texto: form.textoPropio.trim(),
+            }
+          : data;
+
+      setResultado(resultadoFinal);
       setAvisoExito(true);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {

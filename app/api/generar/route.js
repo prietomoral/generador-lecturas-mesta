@@ -66,7 +66,7 @@ async function intentarConGoogle(prompt) {
       const response = await Promise.race([promesaGemini, promesaTimeout]);
       const data = JSON.parse(response.text || "{}");
 
-      if (data?.titulo && data?.texto) {
+      if (data?.titulo && (data?.preguntas_literales || data?.preguntas_inferenciales)) {
         console.log(`✅ [generar-lectura] Éxito con Google: ${modelo}`);
         return data;
       }
@@ -95,7 +95,6 @@ async function generarConGroq(prompt) {
   const listaData = await resModelos.json();
   const idsDisponibles = (listaData.data || []).map((m) => m.id);
 
-  // Filtrar modelos de chat válidos y excluir expresamente qwen (cuota 1000 OTPM) y modelos no textuales
   const candidatosTexto = idsDisponibles.filter((id) => {
     const lower = id.toLowerCase();
     const esChatValido =
@@ -117,7 +116,6 @@ async function generarConGroq(prompt) {
     return esChatValido && !esExcluido;
   });
 
-  // Ordenar por velocidad y cuota disponible
   const preferencias = [
     "llama-3.3-70b",
     "llama-4-scout",
@@ -139,7 +137,6 @@ async function generarConGroq(prompt) {
 
   let ultimoError = "";
 
-  // Recorrer la cascada: si uno da 429 (cuota) o falla, salta inmediatamente al siguiente
   for (const modeloElegido of ordenados.slice(0, 5)) {
     try {
       console.log(`2d. [generar-lectura] Intentando con Groq: ${modeloElegido}...`);
@@ -173,7 +170,7 @@ async function generarConGroq(prompt) {
       if (res.ok) {
         const data = await res.json();
         const parsed = JSON.parse(data.choices[0].message.content);
-        if (parsed?.titulo && parsed?.texto) {
+        if (parsed?.titulo && (parsed?.preguntas_literales || parsed?.preguntas_inferenciales)) {
           console.log(`✅ [generar-lectura] Éxito con Groq: ${modeloElegido}`);
           return parsed;
         }
@@ -196,7 +193,36 @@ export async function POST(request) {
   try {
     const datos = await request.json();
 
-    const prompt = `
+    const esTextoSubido =
+      datos.modoOrigen === "subir" &&
+      typeof datos.textoPropio === "string" &&
+      datos.textoPropio.trim().length > 0;
+
+    const textoOriginal = esTextoSubido ? datos.textoPropio.trim() : "";
+    const tituloOriginal =
+      esTextoSubido && typeof datos.tituloPropio === "string"
+        ? datos.tituloPropio.trim()
+        : "";
+
+    const prompt = esTextoSubido
+      ? `
+Actúa como un docente experto en comprensión lectora del IESO Sierra la Mesta (Extremadura, España).
+El docente ha proporcionado el siguiente TEXTO PROPIO para trabajar con alumnado de ${datos.edad} (complejidad de preguntas: ${datos.dificultad}).
+
+REGLAS ESTRICTAS:
+1. NO inventes ni resumas ni alteres el texto proporcionado. En el campo "texto" del JSON puedes devolver una cadena vacía "" o una breve confirmación, ya que el sistema conservará el texto original del docente.
+2. ${
+        tituloOriginal
+          ? `Usa exactamente este título: "${tituloOriginal}".`
+          : "Propón un título breve y adecuado al texto."
+      }
+3. Elabora exactamente ${datos.numLiterales} preguntas literales (cuya respuesta aparezca explícitamente en el texto proporcionado) y ${datos.numInferenciales} preguntas inferenciales (que requieran deducir o interpretar a partir del texto proporcionado), junto con su respuesta modelo en español de España.
+
+--- INICIO DEL TEXTO PROPIO DEL DOCENTE ---
+${textoOriginal}
+--- FIN DEL TEXTO PROPIO DEL DOCENTE ---
+`.trim()
+      : `
 Actúa como un docente experto en comprensión lectora del IESO Sierra la Mesta (Extremadura, España). Genera una actividad en español de España con:
 - Edad del alumnado: ${datos.edad}
 - Tipo de texto: ${datos.tipoTexto}
@@ -209,14 +235,22 @@ Genera exactamente ${datos.numLiterales} preguntas literales (respuesta explíci
 y ${datos.numInferenciales} preguntas inferenciales (requieren deducción).
 `.trim();
 
-    const resultadoGoogle = await intentarConGoogle(prompt);
-    if (resultadoGoogle) {
-      return NextResponse.json(resultadoGoogle);
+    let resultado = await intentarConGoogle(prompt);
+    if (!resultado) {
+      console.log("2c. [generar-lectura] Google no disponible. Iniciando cascada rápida en Groq...");
+      resultado = await generarConGroq(prompt);
     }
 
-    console.log("2c. [generar-lectura] Google no disponible. Iniciando cascada rápida en Groq...");
-    const resultadoGroq = await generarConGroq(prompt);
-    return NextResponse.json(resultadoGroq);
+    // Blindaje absoluto: si el docente subió/pegó su texto, se conserva íntegro el original
+    if (esTextoSubido) {
+      resultado = {
+        ...resultado,
+        titulo: tituloOriginal || resultado.titulo || "Lectura de clase",
+        texto: textoOriginal,
+      };
+    }
+
+    return NextResponse.json(resultado);
   } catch (error) {
     console.error("❌ [generar-lectura] Error general:", error);
     return NextResponse.json(
