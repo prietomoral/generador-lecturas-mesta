@@ -2,9 +2,12 @@
 
 import React, { useState } from "react";
 import { ResultadoLectura } from "../types/lectura";
+import { supabase } from "../lib/supabase";
+import PanelSeguimientoClase from "./PanelSeguimientoClase";
 
 interface FichaLecturaProps {
   resultado: ResultadoLectura;
+  edad: string;
   avisoExito: boolean;
   onCerrarAviso: () => void;
   onAbrirCorrector: () => void;
@@ -13,12 +16,43 @@ interface FichaLecturaProps {
 
 export default function FichaLectura({
   resultado,
+  edad,
   avisoExito,
   onCerrarAviso,
   onAbrirCorrector,
   seccionRef,
 }: FichaLecturaProps) {
   const [mostrarRespuestas, setMostrarRespuestas] = useState(false);
+  const [codigoAula, setCodigoAula] = useState<string | null>(null);
+  const [publicando, setPublicando] = useState(false);
+
+  const publicarParaClase = async () => {
+    setPublicando(true);
+    try {
+      const codigoGenerado = `MESTA-${Math.floor(100 + Math.random() * 900)}`;
+      const { error } = await supabase.from("actividades").insert({
+        codigo: codigoGenerado,
+        titulo: resultado.titulo,
+        texto: resultado.texto,
+        edad,
+        preguntas_literales: resultado.preguntas_literales || [],
+        preguntas_inferenciales: resultado.preguntas_inferenciales || [],
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setCodigoAula(codigoGenerado);
+      const urlAlumno = `${window.location.origin}/alumno?codigo=${codigoGenerado}`;
+      navigator.clipboard?.writeText(urlAlumno);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al publicar la lectura.";
+      alert("No se pudo publicar en Supabase: " + msg);
+    } finally {
+      setPublicando(false);
+    }
+  };
 
   return (
     <section
@@ -33,7 +67,7 @@ export default function FichaLectura({
               ✓
             </span>
             <div className="text-sm">
-              <strong>¡Actividad generada correctamente!</strong> Ya puedes revisarla, descargarla en PDF o corregir respuestas.
+              <strong>¡Actividad generada correctamente!</strong> Ya puedes revisarla, descargarla en PDF o compartirla con tu clase.
             </div>
           </div>
           <button
@@ -63,12 +97,23 @@ export default function FichaLectura({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {!codigoAula && (
+            <button
+              type="button"
+              disabled={publicando}
+              onClick={publicarParaClase}
+              className="text-sm bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition cursor-pointer"
+            >
+              {publicando ? "Generando código..." : "📢 Compartir con la clase"}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onAbrirCorrector}
             className="text-sm bg-indigo-700 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition cursor-pointer"
           >
-            ✍️ Abrir ventana de corrección IA
+            ✍️ Probar corrección IA
           </button>
 
           <button
@@ -88,6 +133,14 @@ export default function FichaLectura({
           </button>
         </div>
       </div>
+
+      {/* Panel de seguimiento en vivo si ya se ha compartido con la clase */}
+      {codigoAula && (
+        <PanelSeguimientoClase
+          codigoActividad={codigoAula}
+          tituloActividad={resultado.titulo}
+        />
+      )}
 
       {/* BLOQUE 1: FICHA PARA EL ALUMNADO */}
       <div>

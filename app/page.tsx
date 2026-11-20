@@ -144,7 +144,9 @@ export default function GeneradorLectura() {
         {resultado && (
           <>
             <FichaLectura
+              key={resultado.titulo}
               resultado={resultado}
+              edad={form.edad}
               avisoExito={avisoExito}
               onCerrarAviso={() => setAvisoExito(false)}
               onAbrirCorrector={() => setVentanaCorrectorAbierta(true)}
@@ -152,7 +154,7 @@ export default function GeneradorLectura() {
             />
 
             <VentanaCorrector
-              key={resultado.titulo}
+              key={`corrector-${resultado.titulo}`}
               abierta={ventanaCorrectorAbierta}
               onCerrar={() => setVentanaCorrectorAbierta(false)}
               titulo={resultado.titulo}

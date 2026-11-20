@@ -5,22 +5,40 @@ export const maxDuration = 60;
 
 const ai = new GoogleGenAI();
 
+const NIVELES_VALIDOS = [
+  "No conseguido",
+  "Bajamente Conseguido",
+  "Conseguido",
+  "Altamente Conseguido",
+];
+
 const ESQUEMA_CORRECCION = {
   type: Type.OBJECT,
   properties: {
-    nota_global_0_4: { type: Type.NUMBER },
-    calificacion_cualitativa: { type: Type.STRING },
+    nivel_global: {
+      type: Type.STRING,
+      enum: NIVELES_VALIDOS,
+    },
     comentario_general: { type: Type.STRING },
     correcciones_literales: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
-          nivel_0_4: { type: Type.NUMBER },
+          nivel_pregunta: {
+            type: Type.STRING,
+            enum: NIVELES_VALIDOS,
+          },
           estado: { type: Type.STRING },
-          feedback: { type: Type.STRING },
+          pista_comprension: { type: Type.STRING },
+          consejo_redaccion: { type: Type.STRING },
         },
-        required: ["nivel_0_4", "estado", "feedback"],
+        required: [
+          "nivel_pregunta",
+          "estado",
+          "pista_comprension",
+          "consejo_redaccion",
+        ],
       },
     },
     correcciones_inferenciales: {
@@ -28,17 +46,25 @@ const ESQUEMA_CORRECCION = {
       items: {
         type: Type.OBJECT,
         properties: {
-          nivel_0_4: { type: Type.NUMBER },
+          nivel_pregunta: {
+            type: Type.STRING,
+            enum: NIVELES_VALIDOS,
+          },
           estado: { type: Type.STRING },
-          feedback: { type: Type.STRING },
+          pista_comprension: { type: Type.STRING },
+          consejo_redaccion: { type: Type.STRING },
         },
-        required: ["nivel_0_4", "estado", "feedback"],
+        required: [
+          "nivel_pregunta",
+          "estado",
+          "pista_comprension",
+          "consejo_redaccion",
+        ],
       },
     },
   },
   required: [
-    "nota_global_0_4",
-    "calificacion_cualitativa",
+    "nivel_global",
     "comentario_general",
     "correcciones_literales",
     "correcciones_inferenciales",
@@ -46,13 +72,34 @@ const ESQUEMA_CORRECCION = {
 };
 
 const INSTRUCCIONES_SISTEMA = `
-Eres un docente especialista en Comprensión Lectora y Evaluación Inclusiva del IESO Sierra la Mesta (Extremadura, España).
-Evalúa las respuestas del alumnado siguiendo estrictamente estas reglas:
-1. ESCALA OFICIAL (0 a 4): Usa exclusivamente valores de 0 a 4 (0-1: IN, 2: SU/BI, 3: NT, 4: SB). Nunca uses escala de 0 a 10.
-2. EVALUACIÓN INCLUSIVA: Valora la comprensión lectora real. NO penalices errores de ortografía, tildes o expresión escrita propios de alumnado con NEAE.
-3. TONO PEDAGÓGICO: Redacta feedback constructivo, claro, motivador y en español de España.
-4. ESTADO POR PREGUNTA: Usa exactamente uno de estos valores en "estado": "Correcta", "Parcial" o "A mejorar".
+Eres un ENTRENADOR PERSONAL DE COMPRENSIÓN LECTORA Y REDACCIÓN del IESO Sierra la Mesta (Extremadura, España).
+Tu misión NO es examinar ni dar respuestas hechas, sino entrenar al alumno/a para que descubra la solución por sí mismo y mejore su forma de redactar.
+
+REGLAS ESTRICTAS:
+1. PROHIBIDO DAR LA SOLUCIÓN: Si la respuesta es incorrecta, incompleta o está en blanco, NUNCA escribas la respuesta correcta ni copies la frase literal que resuelve la pregunta. Da pistas sobre en qué parte o idea del texto fijarse o qué relación deducir.
+2. ENTRENAMIENTO EN REDACCIÓN: En "consejo_redaccion", ayuda al alumno/a a mejorar cómo expresa su idea (por ejemplo: empezar respondiendo con parte de la pregunta, construir una oración completa con sentido, usar conectores como "porque", "debido a", evitar respuestas telegráficas de una sola palabra). Si ya está bien redactada, refuerza qué ha hecho bien.
+3. EVALUACIÓN INCLUSIVA (NEAE): Valora el sentido y la estructura de la idea. NO penalices faltas de ortografía o tildes.
+4. ESCALA CUALITATIVA EXCLUSIVA (SIN NÚMEROS): Tanto en "nivel_global" como en cada "nivel_pregunta" usa ÚNICAMENTE uno de estos cuatro niveles exactos:
+   - "No conseguido"
+   - "Bajamente Conseguido"
+   - "Conseguido"
+   - "Altamente Conseguido"
+5. ESTADO POR PREGUNTA: Usa exactamente "Correcta", "Parcial" o "A mejorar".
 `;
+
+function parsearJsonSeguro(texto) {
+  const limpio = (texto || "")
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  const inicio = limpio.indexOf("{");
+  const fin = limpio.lastIndexOf("}");
+  if (inicio === -1 || fin === -1) {
+    throw new Error("Respuesta sin formato JSON válido.");
+  }
+  return JSON.parse(limpio.slice(inicio, fin + 1));
+}
 
 async function corregirConGoogle(prompt) {
   const modelosGoogle = [
@@ -70,7 +117,7 @@ async function corregirConGoogle(prompt) {
         config: {
           responseMimeType: "application/json",
           responseSchema: ESQUEMA_CORRECCION,
-          temperature: 0.3,
+          temperature: 0.35,
           ...(esLite ? {} : { thinkingConfig: { thinkingBudget: 0 } }),
         },
       });
@@ -80,13 +127,12 @@ async function corregirConGoogle(prompt) {
       );
 
       const response = await Promise.race([promesa, timeout]);
-      const data = JSON.parse(response.text || "{}");
-      if (typeof data.nota_global_0_4 === "number") {
-        console.log(`✅ [corregir-lectura] Corregido con Google: ${modelo}`);
+      const data = parsearJsonSeguro(response.text);
+      if (NIVELES_VALIDOS.includes(data.nivel_global)) {
         return data;
       }
     } catch (err) {
-      console.warn(`⚠️ [corregir-lectura] Saltando Google ${modelo}: ${err.message}`);
+      console.warn(`⚠️ [corregir-lectura] Saltando Google ${modelo}:${err.message}`);
     }
   }
   return null;
@@ -110,28 +156,17 @@ async function corregirConGroq(prompt) {
 
   for (const modelo of modelosGroq) {
     try {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const res = await fetch("[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: modelo,
-          temperature: 0.3,
-          max_tokens: 2000,
-          response_format: { type: "json_object" },
-          messages: [
-            {
-              role: "system",
-              content: `${INSTRUCCIONES_SISTEMA}
+          Authorization: `Bearer ${apiKey}`, }, body: JSON.stringify({ model: modelo, temperature: 0.35, max_tokens: 2200, response_format: { type: "json_object" }, messages: [ { role: "system", content: `${INSTRUCCIONES_SISTEMA}
 Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
 {
-  "nota_global_0_4": 3,
-  "calificacion_cualitativa": "Notable (NT)",
+  "nivel_global": "Bajamente Conseguido",
   "comentario_general": "string",
-  "correcciones_literales": [{ "nivel_0_4": 4, "estado": "Correcta", "feedback": "string" }],
-  "correcciones_inferenciales": [{ "nivel_0_4": 2, "estado": "Parcial", "feedback": "string" }]
+  "correcciones_literales": [{ "nivel_pregunta": "Conseguido", "estado": "Correcta", "pista_comprension": "string", "consejo_redaccion": "string" }],
+  "correcciones_inferenciales": [{ "nivel_pregunta": "No conseguido", "estado": "A mejorar", "pista_comprension": "string", "consejo_redaccion": "string" }]
 }`,
             },
             { role: "user", content: prompt },
@@ -141,20 +176,19 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
 
       if (res.ok) {
         const data = await res.json();
-        const parsed = JSON.parse(data.choices[0].message.content);
-        if (typeof parsed.nota_global_0_4 === "number") {
-          console.log(`✅ [corregir-lectura] Corregido con Groq: ${modelo}`);
+        const parsed = parsearJsonSeguro(data.choices[0].message.content);
+        if (NIVELES_VALIDOS.includes(parsed.nivel_global)) {
           return parsed;
         }
       }
 
-      ultimoError = `Groq ${modelo} (${res.status}): ${await res.text()}`;
+      ultimoError = `Groq ${modelo} (${res.status}):${await res.text()}`;
     } catch (err) {
       ultimoError = err.message;
     }
   }
 
-  throw new Error(ultimoError || "No se pudo corregir la actividad en este momento.");
+  throw new Error(ultimoError || "No se pudo evaluar la actividad en este momento.");
 }
 
 export async function POST(request) {
@@ -164,6 +198,7 @@ export async function POST(request) {
       titulo,
       texto,
       edad,
+      intentoActual,
       preguntas_literales,
       preguntas_inferenciales,
       respuestasAlumnoLiterales,
@@ -173,30 +208,31 @@ export async function POST(request) {
     const bloqueLiterales = (preguntas_literales || [])
       .map(
         (p, i) =>
-          `L${i + 1}. Pregunta: "${p.pregunta}" | Respuesta modelo: "${p.respuesta}" | Respuesta del alumno/a: "${respuestasAlumnoLiterales?.[i] || "(En blanco)"}"`
+          `L${i + 1}. Pregunta: "${p.pregunta}" | Respuesta modelo (SOLO PARA TI, NO LA REVELES): "${p.respuesta}" | Respuesta del alumno/a: "${respuestasAlumnoLiterales?.[i] || "(En blanco)"}"`
       )
       .join("\n");
 
     const bloqueInferenciales = (preguntas_inferenciales || [])
       .map(
         (p, i) =>
-          `I${i + 1}. Pregunta: "${p.pregunta}" | Respuesta modelo: "${p.respuesta}" | Respuesta del alumno/a: "${respuestasAlumnoInferenciales?.[i] || "(En blanco)"}"`
+          `I${i + 1}. Pregunta: "${p.pregunta}" | Respuesta modelo (SOLO PARA TI, NO LA REVELES): "${p.respuesta}" | Respuesta del alumno/a: "${respuestasAlumnoInferenciales?.[i] || "(En blanco)"}"`
       )
       .join("\n");
 
     const prompt = `
 Nivel del alumnado: ${edad || "ESO"}
+Intento número: ${intentoActual || 1} de 10
 Título de la lectura: "${titulo}"
 Texto de referencia:
 """
 ${texto}
 """
 
-RESPUESTAS A EVALUAR:
+RESPUESTAS DEL ALUMNO/A A ENTRENAR:
 ${bloqueLiterales ? `--- COMPRENSIÓN LITERAL ---\n${bloqueLiterales}` : ""}
 ${bloqueInferenciales ? `\n--- COMPRENSIÓN INFERENCIAL ---\n${bloqueInferenciales}` : ""}
 
-Evalúa cada respuesta en escala oficial de 0 a 4 (0-1: IN, 2: SU/BI, 3: NT, 4: SB), calcula la nota global (de 0 a 4) y ofrece una retroalimentación breve y clara para cada pregunta.
+Actúa como entrenador: evalúa cada respuesta usando SOLO los 4 niveles ("No conseguido", "Bajamente Conseguido", "Conseguido", "Altamente Conseguido"), da una pista sin revelar la solución cuando falte algo y ofrece un consejo práctico para mejorar la redacción de su respuesta.
 `.trim();
 
     const resGoogle = await corregirConGoogle(prompt);
@@ -209,7 +245,7 @@ Evalúa cada respuesta en escala oficial de 0 a 4 (0-1: IN, 2: SU/BI, 3: NT, 4: 
   } catch (error) {
     console.error("❌ [corregir-lectura] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Error al corregir las respuestas." },
+      { error: error.message || "Error al analizar las respuestas." },
       { status: 500 }
     );
   }
