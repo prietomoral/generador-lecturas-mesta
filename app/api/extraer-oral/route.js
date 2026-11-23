@@ -70,9 +70,34 @@ async function obtenerTituloYoutube(videoId) {
   }
   return `Vídeo de YouTube (${videoId})`;
 }
+
 async function extraerTranscripcionYoutube(videoId) {
   const tituloSugerido = await obtenerTituloYoutube(videoId);
   const errores = [];
+
+  // VÍA 0 (Prioritaria en Vercel): Supadata API (usa proxies residenciales, evita bloqueos AWS/Vercel)
+  if (process.env.SUPADATA_API_KEY) {
+    try {
+      const resSupa = await fetch(
+        `https://api.supadata.ai/v1/youtube/transcript?url=https://www.youtube.com/watch?v=${videoId}&text=true`,
+        {
+          headers: { "x-api-key": process.env.SUPADATA_API_KEY },
+        }
+      );
+      if (resSupa.ok) {
+        const dataSupa = await resSupa.json();
+        const textoCrudo = typeof dataSupa.content === "string" ? dataSupa.content : "";
+        const transcripcion = agruparEnParrafos(textoCrudo.split(/(?<=[.!?])\s+/));
+        if (transcripcion.length >= 25) {
+          return { tituloSugerido, transcripcion };
+        }
+      } else {
+        errores.push(`supadata(${resSupa.status})`);
+      }
+    } catch (e) {
+      errores.push(`supadata: ${e.message}`);
+    }
+  }
 
   // VÍA 1: youtube-transcript-plus (funciona directo en local)
   for (const lang of ["es", undefined]) {
@@ -89,7 +114,7 @@ async function extraerTranscripcionYoutube(videoId) {
     }
   }
 
-  // VÍA 2: youtubei.js con clientes embebidos (TV_EMBEDDED y WEB_EMBEDDED funcionan desde IPs de Vercel)
+  // VÍA 2: youtubei.js con clientes embebidos y móviles
   try {
     const youtube = await Innertube.create({
       lang: "es",
@@ -108,7 +133,6 @@ async function extraerTranscripcionYoutube(videoId) {
           tracks.find((t) => t.language_code?.startsWith("es")) ||
           tracks[0];
 
-        // Probar formato json3 y XML estándar
         for (const urlTrack of [`${pista.base_url}&fmt=json3`, pista.base_url]) {
           const resTrack = await fetch(urlTrack);
           if (!resTrack.ok) continue;
@@ -137,7 +161,7 @@ async function extraerTranscripcionYoutube(videoId) {
     errores.push(`innertube-init: ${e.message}`);
   }
 
-  // VÍA 3: Extracción directa del objeto ytInitialPlayerResponse desde el HTML embebido
+  // VÍA 3: Extracción directa desde el HTML embebido
   try {
     const resEmbed = await fetch(`https://www.youtube.com/embed/${videoId}`, {
       headers: {
