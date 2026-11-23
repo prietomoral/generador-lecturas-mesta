@@ -132,8 +132,8 @@ export default function VentanaCorrector({
         {/* Cabecera de la Ventana */}
         <div className="bg-indigo-900 text-white px-5 py-4 flex items-center justify-between gap-3 shrink-0">
           <div>
-            <span className="text-[11px] uppercase tracking-wider font-bold text-indigo-200">
-              IESO Sierra la Mesta · Entrenador de Comprensión y Redacción (Vista Previa Docente)
+            <span className="text-[11px] uppercase tracking-wider font-bold text-indigo-200 block">
+              DialectIA · IESO Sierra la Mesta · Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
             </span>
             <h2 className="text-base sm:text-lg font-extrabold truncate">
               Entrenamiento Interactivo: {titulo}

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Generador de Comprensión Lectora | IESO Sierra la Mesta",
-  description: "Herramienta docente para generar actividades de comprensión lectora",
+  title: "DialectIA | IESO Sierra la Mesta — Programa NEXO",
+  description: "Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem) · IESO Sierra la Mesta",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

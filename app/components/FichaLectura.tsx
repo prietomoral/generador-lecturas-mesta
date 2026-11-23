@@ -270,11 +270,16 @@ export default function FichaLectura({
       {/* BLOQUE 1: FICHA PARA EL ALUMNADO */}
       <div>
         <div className="hidden print:block border-b-2 border-gray-800 pb-4 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <span className="font-bold text-lg uppercase tracking-wide">
-              IESO Sierra la Mesta
-            </span>
-            <span className="text-sm text-gray-600">
+          <div className="flex justify-between items-start mb-4 gap-4">
+            <div>
+              <span className="font-bold text-lg uppercase tracking-wide block">
+                DialectIA · IESO Sierra la Mesta
+              </span>
+              <span className="text-xs text-gray-600 block">
+                Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
+              </span>
+            </div>
+            <span className="text-sm font-semibold text-gray-700 shrink-0">
               {resultado.mediaUrl
                 ? "Actividad de Comprensión Oral"
                 : "Actividad de Comprensión Lectora"}
@@ -438,11 +443,16 @@ export default function FichaLectura({
       {/* BLOQUE 2 (SOLO PDF): SOLUCIONARIO EN HOJA APARTE */}
       <div className="hidden print:block print:break-before-page">
         <div className="border-b-2 border-gray-800 pb-3 mb-6">
-          <div className="flex justify-between items-center">
-            <span className="font-bold text-lg uppercase tracking-wide">
-              IESO Sierra la Mesta
-            </span>
-            <span className="text-sm font-semibold uppercase tracking-wider text-gray-700">
+          <div className="flex justify-between items-start gap-4">
+            <div>
+              <span className="font-bold text-lg uppercase tracking-wide block">
+                DialectIA · IESO Sierra la Mesta
+              </span>
+              <span className="text-xs text-gray-600 block">
+                Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
+              </span>
+            </div>
+            <span className="text-sm font-semibold uppercase tracking-wider text-gray-700 shrink-0">
               Solucionario para el Docente
             </span>
           </div>

@@ -189,13 +189,13 @@ export default function GeneradorLectura() {
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase mb-3">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            IESO Sierra la Mesta · Herramienta Docente
+            IESO Sierra la Mesta
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Generador de Comprensión Lectora y Oral
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            DialectIA
           </h1>
-          <p className="text-blue-100 text-sm mt-1">
-            Crea actividades a medida a partir de textos, documentos PDF/Word o vídeos y audios con preguntas literales e inferenciales.
+          <p className="text-blue-100 text-sm sm:text-base font-medium mt-1">
+            Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
           </p>
         </div>
       </header>
