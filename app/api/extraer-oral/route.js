@@ -91,7 +91,7 @@ async function extraerTranscripcionYoutube(videoId) {
     }
   }
 
-  // VÍA 2: youtubei.js con cliente WEB / TV_EMBEDDED
+  // VÍA 2: youtubei.js con clientes móviles IOS / ANDROID (evitan el bloqueo de IPs de Vercel/AWS)
   try {
     const youtube = await Innertube.create({
       lang: "es",
@@ -99,7 +99,7 @@ async function extraerTranscripcionYoutube(videoId) {
       retrieve_player: false,
     });
 
-    for (const cliente of ["WEB", "TV_EMBEDDED", "ANDROID"]) {
+    for (const cliente of ["IOS", "ANDROID", "TV_EMBEDDED", "WEB"]) {
       try {
         const info = await youtube.getBasicInfo(videoId, cliente);
         const tracks = info.captions?.caption_tracks || [];
@@ -111,7 +111,14 @@ async function extraerTranscripcionYoutube(videoId) {
           tracks.find((t) => t.language_code?.startsWith("es")) ||
           tracks[0];
 
-        const resXml = await fetch(pista.base_url);
+        const resXml = await fetch(pista.base_url, {
+          headers: {
+            "User-Agent":
+              cliente === "IOS"
+                ? "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X)"
+                : "com.google.android.youtube/19.29.37 (Linux; U; Android 14) gzip",
+          },
+        });
         const xml = await resXml.text();
         const matches = [...xml.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)];
         const transcripcion = agruparEnParrafos(matches.map((m) => m[1]));
@@ -128,10 +135,44 @@ async function extraerTranscripcionYoutube(videoId) {
     errores.push(`innertube-init: ${e.message}`);
   }
 
+  // VÍA 3: Fallback externo si la IP de Vercel está bloqueada
+  try {
+    const resApi = await fetch(
+      `https://yt.lemnoslife.com/noKey/captions?part=snippet&videoId=${videoId}`
+    );
+    if (resApi.ok) {
+      const data = await resApi.json();
+      const tracks = data?.items || [];
+      const pista = tracks.find((t) => t.snippet?.language === "es") || tracks[0];
+      if (pista?.id) {
+        const resTrack = await fetch(
+          `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${pista.snippet.language}&fmt=json3`
+        );
+        if (resTrack.ok) {
+          const json = await resTrack.json();
+          const frases = (json.events || [])
+            .map((ev) => (ev.segs || []).map((s) => s.utf8 || "").join(""))
+            .filter(Boolean);
+          const transcripcion = agruparEnParrafos(frases);
+          if (transcripcion.length >= 25) {
+            return { tituloSugerido, transcripcion };
+          }
+        }
+      }
+    }
+  } catch (e) {
+    errores.push(`fallback-api: ${e.message}`);
+  }
+
   console.warn("⚠️ [extraer-oral] Detalle de intentos fallidos:", errores);
-  throw new Error(
-    `No se pudieron extraer subtítulos automáticos (${errores[0] || "sin pistas disponibles"}).`
-  );
+
+  // Devolvemos el vídeo incrustado y su título sin lanzar error 500 para que el docente pueda pegar la transcripción
+  return {
+    tituloSugerido,
+    transcripcion: "",
+    aviso:
+      "YouTube restringió la descarga automática de subtítulos desde la nube para este vídeo. El vídeo ya está cargado: puedes pegar la transcripción manualmente (en YouTube: Descripción → Mostrar transcripción) o subir el archivo de audio.",
+  };
 }
 
 async function transcribirBlobConGroq(blob, nombreArchivo) {
@@ -218,12 +259,13 @@ export async function POST(request) {
     const youtubeId = extraerIdYoutube(urlLimpia);
 
     if (youtubeId) {
-      const { tituloSugerido, transcripcion } = await extraerTranscripcionYoutube(youtubeId);
+      const { tituloSugerido, transcripcion, aviso } = await extraerTranscripcionYoutube(youtubeId);
       return NextResponse.json({
         mediaTipo: "youtube",
         mediaEmbedUrl: `https://www.youtube-nocookie.com/embed/${youtubeId}`,
         tituloSugerido,
         transcripcion,
+        aviso: aviso || null,
       });
     }
 

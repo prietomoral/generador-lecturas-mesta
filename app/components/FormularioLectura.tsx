@@ -13,59 +13,61 @@ interface FormularioLecturaProps {
 }
 
 async function comprimirAudioEnNavegador(file: File): Promise<Blob> {
-  // Si ya pesa menos de 4 MB, se envía tal cual
   if (file.size <= 4 * 1024 * 1024) return file;
 
-  const arrayBuffer = await file.arrayBuffer();
-  const AudioCtx =
-    window.AudioContext ||
-    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-  const audioCtx = new AudioCtx();
-  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const audioCtx = new AudioCtx();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-  // Re-muestreo a 16 kHz mono (óptimo para Whisper y 10x más ligero)
-  const targetRate = 16000;
-  const numSamples = Math.ceil(audioBuffer.duration * targetRate);
-  const offlineCtx = new OfflineAudioContext(1, numSamples, targetRate);
+    // Re-muestreo a 8 kHz mono (suficiente para voz en Whisper y ~0,9 MB por minuto)
+    const targetRate = 8000;
+    const numSamples = Math.ceil(audioBuffer.duration * targetRate);
+    const offlineCtx = new OfflineAudioContext(1, numSamples, targetRate);
 
-  const source = offlineCtx.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(offlineCtx.destination);
-  source.start(0);
+    const source = offlineCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineCtx.destination);
+    source.start(0);
 
-  const rendered = await offlineCtx.startRendering();
-  await audioCtx.close();
+    const rendered = await offlineCtx.startRendering();
+    await audioCtx.close();
 
-  // Codificar a WAV PCM 16-bit mono (~1.9 MB por minuto de audio)
-  const samples = rendered.getChannelData(0);
-  const buffer = new ArrayBuffer(44 + samples.length * 2);
-  const view = new DataView(buffer);
+    const samples = rendered.getChannelData(0);
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
 
-  const escribirTexto = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  };
+    const escribirTexto = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
 
-  escribirTexto(0, "RIFF");
-  view.setUint32(4, 36 + samples.length * 2, true);
-  escribirTexto(8, "WAVE");
-  escribirTexto(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, targetRate, true);
-  view.setUint32(28, targetRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  escribirTexto(36, "data");
-  view.setUint32(40, samples.length * 2, true);
+    escribirTexto(0, "RIFF");
+    view.setUint32(4, 36 + samples.length * 2, true);
+    escribirTexto(8, "WAVE");
+    escribirTexto(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, targetRate, true);
+    view.setUint32(28, targetRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    escribirTexto(36, "data");
+    view.setUint32(40, samples.length * 2, true);
 
-  let offset = 44;
-  for (let i = 0; i < samples.length; i++, offset += 2) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++, offset += 2) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+
+    return new Blob([buffer], { type: "audio/wav" });
+  } catch {
+    return file;
   }
-
-  return new Blob([buffer], { type: "audio/wav" });
 }
 
 export default function FormularioLectura({
@@ -200,9 +202,15 @@ export default function FormularioLectura({
         mediaUrl: data.mediaEmbedUrl,
         mediaTipo: data.mediaTipo as MediaTipo,
         tituloPropio: prev.tituloPropio || data.tituloSugerido,
-        textoPropio: data.transcripcion,
+        textoPropio: data.transcripcion || prev.textoPropio || "",
       }));
-      setPestanaOral("reproductor");
+
+      if (data.aviso) {
+        setPestanaOral("transcripcion");
+        alert(data.aviso);
+      } else {
+        setPestanaOral("reproductor");
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error al procesar el vídeo o audio.";
       alert(msg);
@@ -217,7 +225,7 @@ export default function FormularioLectura({
 
     const urlLocal = URL.createObjectURL(file);
     const esVideo =
-      file.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(file.name);
+      file.type.startsWith("video/") || /\.(mp4|webm|mov|m4v|mkv)$/i.test(file.name);
 
     setExtrayendoOral(true);
     try {
@@ -487,7 +495,7 @@ export default function FormularioLectura({
                 <span>{extrayendoOral ? "⏳..." : "📂 Subir audio / vídeo"}</span>
                 <input
                   type="file"
-                  accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4,.webm"
+                  accept="audio/*,video/*,.mp3,.wav,.m4a,.ogg,.mp4,.webm,.mkv"
                   disabled={extrayendoOral}
                   onChange={manejarSubidaArchivoOral}
                   className="hidden"
@@ -573,7 +581,9 @@ export default function FormularioLectura({
                   </div>
                 )}
                 <p className="text-[11px] text-slate-500">
-                  La transcripción ya está extraída en segundo plano para generar las preguntas y corregir al alumnado.
+                  {form.textoPropio
+                    ? "La transcripción ya está extraída en segundo plano para generar las preguntas y corregir al alumnado."
+                    : "El vídeo está cargado. Pulsa en «Transcripción extraída» para pegar o escribir la transcripción."}
                 </p>
               </div>
             ) : (
