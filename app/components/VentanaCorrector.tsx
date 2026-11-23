@@ -47,6 +47,12 @@ export default function VentanaCorrector({
 
   if (!abierta) return null;
 
+  const parrafosTexto = (texto || "")
+    .replace(/\\n/g, "\n")
+    .split(/\r?\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
   const manejarCorreccion = async () => {
     const hayAlgunaRespuesta =
       respLiterales.some((r) => r.trim().length > 0) ||
@@ -141,8 +147,12 @@ export default function VentanaCorrector({
               Texto de lectura
             </h3>
             <h4 className="text-lg font-bold text-slate-900 mb-3">{titulo}</h4>
-            <div className="whitespace-pre-line text-sm leading-relaxed text-slate-700 text-justify">
-              {texto}
+            <div className="space-y-3 text-sm leading-relaxed text-slate-700 text-justify">
+              {parrafosTexto.map((parrafo, idx) => (
+                <p key={idx} className="indent-3">
+                  {parrafo}
+                </p>
+              ))}
             </div>
           </div>
 

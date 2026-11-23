@@ -50,6 +50,12 @@ function VistaAlumnoContenido() {
   const sinIntentos = intentos >= MAX_INTENTOS && !superada;
   const bloqueado = superada || sinIntentos;
 
+  const parrafosTexto = (actividad?.texto || "")
+    .replace(/\\n/g, "\n")
+    .split(/\r?\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
   const entrarActividad = async (e: React.FormEvent) => {
     e.preventDefault();
     const codLimpio = codigo.trim().toUpperCase();
@@ -258,8 +264,12 @@ function VistaAlumnoContenido() {
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
               Texto de lectura
             </h2>
-            <div className="whitespace-pre-line text-sm leading-relaxed text-slate-800 text-justify">
-              {actividad.texto}
+            <div className="space-y-3.5 text-sm leading-relaxed text-slate-800 text-justify">
+              {parrafosTexto.map((parrafo, idx) => (
+                <p key={idx} className="indent-3">
+                  {parrafo}
+                </p>
+              ))}
             </div>
           </div>
 

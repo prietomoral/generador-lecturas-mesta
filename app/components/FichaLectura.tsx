@@ -26,6 +26,12 @@ export default function FichaLectura({
   const [codigoAula, setCodigoAula] = useState<string | null>(null);
   const [publicando, setPublicando] = useState(false);
 
+  const parrafosTexto = (resultado.texto || "")
+    .replace(/\\n/g, "\n")
+    .split(/\r?\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
   const publicarParaClase = async () => {
     setPublicando(true);
     try {
@@ -165,8 +171,12 @@ export default function FichaLectura({
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 text-slate-900 print:text-2xl print:mb-4">
             {resultado.titulo}
           </h2>
-          <div className="whitespace-pre-line leading-relaxed text-base sm:text-lg text-slate-700 text-justify bg-slate-50/60 p-6 rounded-xl border border-slate-100 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black">
-            {resultado.texto}
+          <div className="space-y-4 leading-relaxed text-base sm:text-lg text-slate-700 text-justify bg-slate-50/60 p-6 rounded-xl border border-slate-100 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black print:space-y-3">
+            {parrafosTexto.map((parrafo, idx) => (
+              <p key={idx} className="indent-4 sm:indent-6 print:indent-4">
+                {parrafo}
+              </p>
+            ))}
           </div>
         </div>
 

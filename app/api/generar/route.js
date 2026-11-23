@@ -36,6 +36,15 @@ const ESQUEMA_LECTURA = {
   required: ["titulo", "texto", "preguntas_literales", "preguntas_inferenciales"],
 };
 
+function normalizarParrafos(texto) {
+  if (!texto || typeof texto !== "string") return "";
+  return texto
+    .replace(/\\n/g, "\n") // Convierte secuencias literales "\n" en saltos reales
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 async function intentarConGoogle(prompt) {
   const modelosGoogle = [
     "gemini-3.8-flash",
@@ -157,7 +166,7 @@ async function generarConGroq(prompt) {
               content: `Eres un docente experto del IESO Sierra la Mesta. Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
 {
   "titulo": "string",
-  "texto": "string",
+  "texto": "string (organizado en varios párrafos separados por \\n\\n)",
   "preguntas_literales": [{ "pregunta": "string", "respuesta": "string" }],
   "preguntas_inferenciales": [{ "pregunta": "string", "respuesta": "string" }]
 }`,
@@ -231,6 +240,10 @@ Actúa como un docente experto en comprensión lectora del IESO Sierra la Mesta 
 - Temática: ${datos.tematica}
 - Saberes/Contenidos relacionados: ${datos.saberes || "Libres"}
 
+REGLAS DE ESTRUCTURA Y PÁRRAFOS:
+- Divide la lectura en varios párrafos claros y bien estructurados (entre 3 y 6 párrafos según la extensión, respetando los puntos y aparte).
+- Separa cada párrafo usando obligatoriamente un doble salto de línea (\\n\\n). Nunca escribas el texto como un único bloque continuo.
+
 Genera exactamente ${datos.numLiterales} preguntas literales (respuesta explícita en el texto) 
 y ${datos.numInferenciales} preguntas inferenciales (requieren deducción).
 `.trim();
@@ -241,12 +254,16 @@ y ${datos.numInferenciales} preguntas inferenciales (requieren deducción).
       resultado = await generarConGroq(prompt);
     }
 
-    // Blindaje absoluto: si el docente subió/pegó su texto, se conserva íntegro el original
     if (esTextoSubido) {
       resultado = {
         ...resultado,
         titulo: tituloOriginal || resultado.titulo || "Lectura de clase",
         texto: textoOriginal,
+      };
+    } else {
+      resultado = {
+        ...resultado,
+        texto: normalizarParrafos(resultado.texto),
       };
     }
 
