@@ -70,32 +70,33 @@ async function obtenerTituloYoutube(videoId) {
   }
   return `Vídeo de YouTube (${videoId})`;
 }
-
 async function extraerTranscripcionYoutube(videoId) {
   const tituloSugerido = await obtenerTituloYoutube(videoId);
   const errores = [];
 
-  // VÍA 0 (Prioritaria en Vercel): Supadata API (usa proxies residenciales, evita bloqueos AWS/Vercel)
+  // VÍA 0 (Prioritaria en Vercel): Supadata API forzando primero español (&lang=es)
   if (process.env.SUPADATA_API_KEY) {
-    try {
-      const resSupa = await fetch(
-        `https://api.supadata.ai/v1/youtube/transcript?url=https://www.youtube.com/watch?v=${videoId}&text=true`,
-        {
-          headers: { "x-api-key": process.env.SUPADATA_API_KEY },
+    for (const langParam of ["&lang=es", ""]) {
+      try {
+        const resSupa = await fetch(
+          `https://api.supadata.ai/v1/youtube/transcript?url=https://www.youtube.com/watch?v=${videoId}&text=true${langParam}`,
+          {
+            headers: { "x-api-key": process.env.SUPADATA_API_KEY },
+          }
+        );
+        if (resSupa.ok) {
+          const dataSupa = await resSupa.json();
+          const textoCrudo = typeof dataSupa.content === "string" ? dataSupa.content : "";
+          const transcripcion = agruparEnParrafos(textoCrudo.split(/(?<=[.!?])\s+/));
+          if (transcripcion.length >= 25) {
+            return { tituloSugerido, transcripcion };
+          }
+        } else {
+          errores.push(`supadata(${langParam || "default"}:${resSupa.status})`);
         }
-      );
-      if (resSupa.ok) {
-        const dataSupa = await resSupa.json();
-        const textoCrudo = typeof dataSupa.content === "string" ? dataSupa.content : "";
-        const transcripcion = agruparEnParrafos(textoCrudo.split(/(?<=[.!?])\s+/));
-        if (transcripcion.length >= 25) {
-          return { tituloSugerido, transcripcion };
-        }
-      } else {
-        errores.push(`supadata(${resSupa.status})`);
+      } catch (e) {
+        errores.push(`supadata: ${e.message}`);
       }
-    } catch (e) {
-      errores.push(`supadata: ${e.message}`);
     }
   }
 
@@ -131,6 +132,7 @@ async function extraerTranscripcionYoutube(videoId) {
         const pista =
           tracks.find((t) => t.language_code === "es" && t.kind !== "asr") ||
           tracks.find((t) => t.language_code?.startsWith("es")) ||
+          tracks.find((t) => t.language_code?.startsWith("en")) ||
           tracks[0];
 
         for (const urlTrack of [`${pista.base_url}&fmt=json3`, pista.base_url]) {
@@ -178,6 +180,7 @@ async function extraerTranscripcionYoutube(videoId) {
         const pista =
           tracks.find((t) => t.languageCode === "es" && t.kind !== "asr") ||
           tracks.find((t) => t.languageCode?.startsWith("es")) ||
+          tracks.find((t) => t.languageCode?.startsWith("en")) ||
           tracks[0];
 
         if (pista?.baseUrl) {
