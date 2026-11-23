@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FormLectura, obtenerTemaAleatorio } from "../types/lectura";
 
 interface FormularioLecturaProps {
@@ -20,8 +20,18 @@ export default function FormularioLectura({
 }: FormularioLecturaProps) {
   const [extrayendoArchivo, setExtrayendoArchivo] = useState(false);
   const [nombreArchivo, setNombreArchivo] = useState("");
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pestanaSubida, setPestanaSubida] = useState<"visor" | "texto">("visor");
 
   const modo = form.modoOrigen || "generar";
+
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+      }
+    };
+  }, [pdfPreviewUrl]);
 
   const ajustarPreguntas = (campo: "numLiterales" | "numInferenciales", delta: number) => {
     setForm((prev) => ({
@@ -33,6 +43,20 @@ export default function FormularioLectura({
   const manejarSubidaArchivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
+
+    const esPdf = file.name.toLowerCase().endsWith(".pdf");
+    if (esPdf) {
+      const urlTemporal = URL.createObjectURL(file);
+      setPdfPreviewUrl(urlTemporal);
+      setPestanaSubida("visor");
+    } else {
+      setPestanaSubida("texto");
+    }
 
     setExtrayendoArchivo(true);
     setNombreArchivo(file.name);
@@ -59,11 +83,23 @@ export default function FormularioLectura({
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error al leer el archivo.";
       alert(msg);
-      setNombreArchivo("");
+      if (!esPdf) {
+        setNombreArchivo("");
+      }
     } finally {
       setExtrayendoArchivo(false);
       e.target.value = "";
     }
+  };
+
+  const limpiarArchivoSubido = () => {
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
+    setNombreArchivo("");
+    setPestanaSubida("visor");
+    setForm((prev) => ({ ...prev, tituloPropio: "", textoPropio: "" }));
   };
 
   return (
@@ -103,7 +139,9 @@ export default function FormularioLectura({
           <span className="w-5 h-5 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
             1
           </span>
-          {modo === "subir" ? "Nivel del alumnado y dificultad de preguntas" : "Nivel y estructura del texto"}
+          {modo === "subir"
+            ? "Nivel del alumnado y dificultad de preguntas"
+            : "Nivel y estructura del texto"}
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -127,7 +165,9 @@ export default function FormularioLectura({
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              {modo === "subir" ? "Complejidad de las preguntas" : "Complejidad léxica y sintáctica"}
+              {modo === "subir"
+                ? "Complejidad de las preguntas"
+                : "Complejidad léxica y sintáctica"}
             </label>
             <select
               className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3.5 py-2.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
@@ -227,7 +267,8 @@ export default function FormularioLectura({
                   Importar archivo o pegar fragmento
                 </div>
                 <div className="text-xs text-slate-600">
-                  Soporta <strong>.pdf</strong>, <strong>.docx</strong> (Word), <strong>.txt</strong> y <strong>.md</strong>.
+                  Soporta <strong>.pdf</strong> (con visor integrado), <strong>.docx</strong> (Word),{" "}
+                  <strong>.txt</strong> y <strong>.md</strong>.
                 </div>
               </div>
 
@@ -246,14 +287,14 @@ export default function FormularioLectura({
             </div>
 
             {nombreArchivo && (
-              <div className="flex items-center justify-between text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl">
-                <span>✓ Archivo cargado: {nombreArchivo}</span>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl">
+                <span>
+                  ✓ Archivo cargado: {nombreArchivo}{" "}
+                  {extrayendoArchivo && "(extrayendo texto limpio en segundo plano...)"}
+                </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setNombreArchivo("");
-                    setForm((prev) => ({ ...prev, tituloPropio: "", textoPropio: "" }));
-                  }}
+                  onClick={limpiarArchivoSubido}
                   className="text-emerald-900 underline hover:text-rose-700 cursor-pointer"
                 >
                   Quitar
@@ -264,7 +305,9 @@ export default function FormularioLectura({
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 Título de la lectura{" "}
-                <span className="text-slate-400 font-normal">(opcional, si lo dejas vacío la IA creará uno)</span>
+                <span className="text-slate-400 font-normal">
+                  (opcional, si lo dejas vacío la IA creará uno)
+                </span>
               </label>
               <input
                 type="text"
@@ -275,19 +318,62 @@ export default function FormularioLectura({
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Texto base para trabajar <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                rows={7}
-                required
-                placeholder="Aquí aparecerá el contenido extraído de tu PDF/Word, o puedes pegar directamente cualquier texto..."
-                className="w-full bg-white border border-slate-300 text-slate-800 text-sm leading-relaxed rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition"
-                value={form.textoPropio || ""}
-                onChange={(e) => setForm({ ...form, textoPropio: e.target.value })}
-              />
-            </div>
+            {/* Si hay PDF cargado, permite alternar entre el visor embebido original y el texto extraído */}
+            {pdfPreviewUrl && (
+              <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-indigo-200/80 w-fit">
+                <button
+                  type="button"
+                  onClick={() => setPestanaSubida("visor")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    pestanaSubida === "visor"
+                      ? "bg-indigo-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  📑 Visor PDF original (con imágenes y diseño)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPestanaSubida("texto")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    pestanaSubida === "texto"
+                      ? "bg-indigo-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  📝 Texto extraído depurado ({form.textoPropio?.length || 0} car.)
+                </button>
+              </div>
+            )}
+
+            {pdfPreviewUrl && pestanaSubida === "visor" ? (
+              <div className="space-y-2">
+                <div className="w-full h-[460px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
+                  <iframe
+                    src={`${pdfPreviewUrl}#toolbar=1&navpanes=0`}
+                    title="Vista previa del PDF original"
+                    className="w-full h-full"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Visualizando el documento PDF original. El texto se ha extraído y filtrado en segundo plano para elaborar las preguntas.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Texto base para trabajar <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={7}
+                  required
+                  placeholder="Aquí aparecerá el contenido extraído y depurado de tu PDF/Word, o puedes pegar directamente cualquier texto..."
+                  className="w-full bg-white border border-slate-300 text-slate-800 text-sm leading-relaxed rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition"
+                  value={form.textoPropio || ""}
+                  onChange={(e) => setForm({ ...form, textoPropio: e.target.value })}
+                />
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

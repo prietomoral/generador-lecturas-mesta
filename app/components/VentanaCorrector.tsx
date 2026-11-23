@@ -23,6 +23,7 @@ interface VentanaCorrectorProps {
   titulo: string;
   texto: string;
   edad: string;
+  pdfPreviewUrl?: string | null;
   preguntasLiterales: Pregunta[];
   preguntasInferenciales: Pregunta[];
 }
@@ -33,6 +34,7 @@ export default function VentanaCorrector({
   titulo,
   texto,
   edad,
+  pdfPreviewUrl,
   preguntasLiterales,
   preguntasInferenciales,
 }: VentanaCorrectorProps) {
@@ -44,6 +46,7 @@ export default function VentanaCorrector({
   );
   const [corrigiendo, setCorrigiendo] = useState(false);
   const [evaluacion, setEvaluacion] = useState<ResultadoCorreccion | null>(null);
+  const [vistaLectura, setVistaLectura] = useState<"pdf" | "texto">("pdf");
 
   if (!abierta) return null;
 
@@ -139,21 +142,61 @@ export default function VentanaCorrector({
           </button>
         </div>
 
-        {/* Cuerpo dividido en 2 columnas: Texto a la izquierda, Preguntas a la derecha */}
+        {/* Cuerpo dividido en 2 columnas: Texto/PDF a la izquierda, Preguntas a la derecha */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-          {/* Columna Izquierda: Texto de referencia siempre visible */}
-          <div className="lg:col-span-5 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200 p-5 overflow-y-auto">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-              Texto de lectura
-            </h3>
-            <h4 className="text-lg font-bold text-slate-900 mb-3">{titulo}</h4>
-            <div className="space-y-3 text-sm leading-relaxed text-slate-700 text-justify">
-              {parrafosTexto.map((parrafo, idx) => (
-                <p key={idx} className="indent-3">
-                  {parrafo}
-                </p>
-              ))}
+          {/* Columna Izquierda: Documento PDF original o texto extraído */}
+          <div className="lg:col-span-5 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200 p-5 overflow-y-auto flex flex-col">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Documento de lectura
+              </h3>
+              {pdfPreviewUrl && (
+                <div className="inline-flex bg-slate-200/80 p-0.5 rounded-lg text-[11px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setVistaLectura("pdf")}
+                    className={`px-2 py-1 rounded-md transition cursor-pointer ${
+                      vistaLectura === "pdf"
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    📑 PDF original
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVistaLectura("texto")}
+                    className={`px-2 py-1 rounded-md transition cursor-pointer ${
+                      vistaLectura === "texto"
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    📝 Texto
+                  </button>
+                </div>
+              )}
             </div>
+
+            <h4 className="text-lg font-bold text-slate-900 mb-3">{titulo}</h4>
+
+            {pdfPreviewUrl && vistaLectura === "pdf" ? (
+              <div className="flex-1 min-h-[360px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
+                <iframe
+                  src={`${pdfPreviewUrl}#toolbar=1&navpanes=0`}
+                  title="PDF original en entrenador"
+                  className="w-full h-full"
+                />
+              </div>
+            ) : (
+              <div className="space-y-3 text-sm leading-relaxed text-slate-700 text-justify">
+                {parrafosTexto.map((parrafo, idx) => (
+                  <p key={idx} className="indent-3">
+                    {parrafo}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Columna Derecha: Respuestas y Entrenamiento IA */}

@@ -8,6 +8,7 @@ import PanelSeguimientoClase from "./PanelSeguimientoClase";
 interface FichaLecturaProps {
   resultado: ResultadoLectura;
   edad: string;
+  pdfPreviewUrl?: string | null;
   avisoExito: boolean;
   onCerrarAviso: () => void;
   onAbrirCorrector: () => void;
@@ -27,6 +28,7 @@ const SUGERENCIAS_RAPIDAS = [
 export default function FichaLectura({
   resultado,
   edad,
+  pdfPreviewUrl,
   avisoExito,
   onCerrarAviso,
   onAbrirCorrector,
@@ -37,6 +39,7 @@ export default function FichaLectura({
   const [mostrarRespuestas, setMostrarRespuestas] = useState(false);
   const [codigoAula, setCodigoAula] = useState<string | null>(null);
   const [publicando, setPublicando] = useState(false);
+  const [vistaDocumento, setVistaDocumento] = useState<"pdf" | "texto">("pdf");
 
   const [panelRefinarAbierto, setPanelRefinarAbierto] = useState(false);
   const [instruccion, setInstruccion] = useState("");
@@ -283,7 +286,52 @@ export default function FichaLectura({
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 text-slate-900 print:text-2xl print:mb-4">
             {resultado.titulo}
           </h2>
-          <div className="space-y-4 leading-relaxed text-base sm:text-lg text-slate-700 text-justify bg-slate-50/60 p-6 rounded-xl border border-slate-100 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black print:space-y-3">
+
+          {/* Selector entre Visor PDF original (si existe) y Texto extraído */}
+          {pdfPreviewUrl && (
+            <div className="flex justify-center mb-4 print:hidden">
+              <div className="inline-flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setVistaDocumento("pdf")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    vistaDocumento === "pdf"
+                      ? "bg-indigo-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  📑 Ver PDF original (con imágenes y maquetación)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVistaDocumento("texto")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    vistaDocumento === "texto"
+                      ? "bg-indigo-600 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  📝 Ver texto extraído limpio
+                </button>
+              </div>
+            </div>
+          )}
+
+          {pdfPreviewUrl && vistaDocumento === "pdf" && (
+            <div className="w-full h-[540px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner mb-4 print:hidden">
+              <iframe
+                src={`${pdfPreviewUrl}#toolbar=1&navpanes=0`}
+                title="Documento PDF original"
+                className="w-full h-full"
+              />
+            </div>
+          )}
+
+          <div
+            className={`${
+              pdfPreviewUrl && vistaDocumento === "pdf" ? "hidden print:block" : "block"
+            } space-y-4 leading-relaxed text-base sm:text-lg text-slate-700 text-justify bg-slate-50/60 p-6 rounded-xl border border-slate-100 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black print:space-y-3`}
+          >
             {parrafosTexto.map((parrafo, idx) => (
               <p key={idx} className="indent-4 sm:indent-6 print:indent-4">
                 {parrafo}

@@ -16,6 +16,7 @@ interface Actividad {
   titulo: string;
   texto: string;
   edad: string;
+  pdf_url?: string | null;
   preguntas_literales: Pregunta[];
   preguntas_inferenciales: Pregunta[];
 }
@@ -46,6 +47,7 @@ function VistaAlumnoContenido() {
   const [superada, setSuperada] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [corrigiendo, setCorrigiendo] = useState(false);
+  const [vistaLectura, setVistaLectura] = useState<"pdf" | "texto">("pdf");
 
   const sinIntentos = intentos >= MAX_INTENTOS && !superada;
   const bloqueado = superada || sinIntentos;
@@ -261,16 +263,55 @@ function VistaAlumnoContenido() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-5 h-fit">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-              Texto de lectura
-            </h2>
-            <div className="space-y-3.5 text-sm leading-relaxed text-slate-800 text-justify">
-              {parrafosTexto.map((parrafo, idx) => (
-                <p key={idx} className="indent-3">
-                  {parrafo}
-                </p>
-              ))}
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Documento de lectura
+              </h2>
+              {actividad.pdf_url && (
+                <div className="inline-flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setVistaLectura("pdf")}
+                    className={`px-2 py-1 rounded-md transition cursor-pointer ${
+                      vistaLectura === "pdf"
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    📑 Documento original
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVistaLectura("texto")}
+                    className={`px-2 py-1 rounded-md transition cursor-pointer ${
+                      vistaLectura === "texto"
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    📝 Solo texto
+                  </button>
+                </div>
+              )}
             </div>
+
+            {actividad.pdf_url && vistaLectura === "pdf" ? (
+              <div className="w-full h-[520px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
+                <iframe
+                  src={`${actividad.pdf_url}#toolbar=1&navpanes=0`}
+                  title={actividad.titulo}
+                  className="w-full h-full"
+                />
+              </div>
+            ) : (
+              <div className="space-y-3.5 text-sm leading-relaxed text-slate-800 text-justify">
+                {parrafosTexto.map((parrafo, idx) => (
+                  <p key={idx} className="indent-3">
+                    {parrafo}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-5 space-y-5">
