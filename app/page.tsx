@@ -33,6 +33,7 @@ export default function GeneradorLectura() {
   }, []);
 
   const [resultado, setResultado] = useState<ResultadoLectura | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [refinando, setRefinando] = useState(false);
   const [segundosRestantes, setSegundosRestantes] = useState(TIEMPO_LIMITE_SEGUNDOS);
@@ -112,15 +113,21 @@ export default function GeneradorLectura() {
         throw new Error(data.error || "Error en la respuesta del servidor");
       }
 
-      // Doble garantía: si se subió/pegó texto propio, se mantiene íntegro
-      const resultadoFinal: ResultadoLectura =
-        form.modoOrigen === "subir" && form.textoPropio?.trim()
-          ? {
-              ...data,
-              titulo: form.tituloPropio?.trim() || data.titulo,
-              texto: form.textoPropio.trim(),
-            }
-          : data;
+      // Doble garantía: conserva el texto/transcripción original y los datos multimedia si es oral
+      const esContenidoPropio =
+        (form.modoOrigen === "subir" || form.modoOrigen === "oral") &&
+        Boolean(form.textoPropio?.trim());
+
+      const resultadoFinal: ResultadoLectura = esContenidoPropio
+        ? {
+            ...data,
+            titulo: form.tituloPropio?.trim() || data.titulo,
+            texto: form.textoPropio!.trim(),
+            ...(form.modoOrigen === "oral" && form.mediaUrl
+              ? { mediaUrl: form.mediaUrl, mediaTipo: form.mediaTipo }
+              : {}),
+          }
+        : data;
 
       setResultado(resultadoFinal);
       setAvisoExito(true);
@@ -128,7 +135,7 @@ export default function GeneradorLectura() {
       if (err instanceof Error && err.name === "AbortError") {
         alert(`La petición tardó demasiado (más de ${TIEMPO_LIMITE_SEGUNDOS}s).`);
       } else {
-        const mensaje = err instanceof Error ? err.message : "No se pudo generar la lectura.";
+        const mensaje = err instanceof Error ? err.message : "No se pudo generar la actividad.";
         alert("Error: " + mensaje);
       }
     } finally {
@@ -159,15 +166,22 @@ export default function GeneradorLectura() {
         throw new Error(data.error || "No se pudo aplicar el ajuste.");
       }
 
-      setResultado(data);
+      setResultado({
+        ...data,
+        ...(resultado.mediaUrl
+          ? { mediaUrl: resultado.mediaUrl, mediaTipo: resultado.mediaTipo }
+          : {}),
+      });
       setAvisoExito(true);
     } catch (err: unknown) {
-      const mensaje = err instanceof Error ? err.message : "No se pudo ajustar la lectura.";
+      const mensaje = err instanceof Error ? err.message : "No se pudo ajustar la actividad.";
       alert("Error al ajustar: " + mensaje);
     } finally {
       setRefinando(false);
     }
   };
+
+  const pdfActivo = form.modoOrigen === "subir" ? pdfPreviewUrl : null;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-16 print:bg-white print:pb-0">
@@ -178,10 +192,10 @@ export default function GeneradorLectura() {
             IESO Sierra la Mesta · Herramienta Docente
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Generador de Comprensión Lectora
+            Generador de Comprensión Lectora y Oral
           </h1>
           <p className="text-blue-100 text-sm mt-1">
-            Crea textos a medida con preguntas literales e inferenciales listos para imprimir o corregir en clase.
+            Crea actividades a medida a partir de textos, documentos PDF/Word o vídeos y audios con preguntas literales e inferenciales.
           </p>
         </div>
       </header>
@@ -193,6 +207,7 @@ export default function GeneradorLectura() {
           cargando={cargando}
           segundosRestantes={segundosRestantes}
           onSubmit={handleSubmit}
+          onPdfChange={setPdfPreviewUrl}
         />
 
         {resultado && (
@@ -200,6 +215,7 @@ export default function GeneradorLectura() {
             <FichaLectura
               resultado={resultado}
               edad={form.edad}
+              pdfPreviewUrl={pdfActivo}
               avisoExito={avisoExito}
               onCerrarAviso={() => setAvisoExito(false)}
               onAbrirCorrector={() => setVentanaCorrectorAbierta(true)}
@@ -215,6 +231,9 @@ export default function GeneradorLectura() {
               titulo={resultado.titulo}
               texto={resultado.texto}
               edad={form.edad}
+              pdfPreviewUrl={pdfActivo}
+              mediaUrl={resultado.mediaUrl || null}
+              mediaTipo={resultado.mediaTipo || null}
               preguntasLiterales={resultado.preguntas_literales || []}
               preguntasInferenciales={resultado.preguntas_inferenciales || []}
             />

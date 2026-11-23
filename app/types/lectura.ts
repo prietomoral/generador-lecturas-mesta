@@ -3,17 +3,23 @@ export interface Pregunta {
   respuesta: string;
 }
 
+export type MediaTipo = "youtube" | "video" | "audio";
+
 export interface ResultadoLectura {
   titulo: string;
   texto: string;
   preguntas_literales: Pregunta[];
   preguntas_inferenciales: Pregunta[];
+  mediaUrl?: string;
+  mediaTipo?: MediaTipo;
 }
 
 export interface FormLectura {
-  modoOrigen?: "generar" | "subir";
+  modoOrigen?: "generar" | "subir" | "oral";
   tituloPropio?: string;
   textoPropio?: string;
+  mediaUrl?: string;
+  mediaTipo?: MediaTipo;
   edad: string;
   tipoTextoSelect: string;
   tipoTextoOtro: string;

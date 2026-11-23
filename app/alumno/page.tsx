@@ -17,6 +17,8 @@ interface Actividad {
   texto: string;
   edad: string;
   pdf_url?: string | null;
+  media_url?: string | null;
+  media_tipo?: "youtube" | "video" | "audio" | null;
   preguntas_literales: Pregunta[];
   preguntas_inferenciales: Pregunta[];
 }
@@ -47,10 +49,11 @@ function VistaAlumnoContenido() {
   const [superada, setSuperada] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [corrigiendo, setCorrigiendo] = useState(false);
-  const [vistaLectura, setVistaLectura] = useState<"pdf" | "texto">("pdf");
+  const [vistaLectura, setVistaLectura] = useState<"original" | "texto">("original");
 
   const sinIntentos = intentos >= MAX_INTENTOS && !superada;
   const bloqueado = superada || sinIntentos;
+  const tieneRecursoOriginal = Boolean(actividad?.media_url || actividad?.pdf_url);
 
   const parrafosTexto = (actividad?.texto || "")
     .replace(/\\n/g, "\n")
@@ -190,10 +193,10 @@ function VistaAlumnoContenido() {
           className="bg-white max-w-md w-full rounded-2xl shadow-lg border border-slate-200 p-6 space-y-4"
         >
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-700">
-            IESO Sierra la Mesta · Entrenador de Lectura
+            IESO Sierra la Mesta · Entrenador de Comprensión
           </span>
           <h1 className="text-xl font-extrabold text-slate-900">
-            Acceder a la lectura de clase
+            Acceder a la actividad de clase
           </h1>
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">
@@ -226,7 +229,7 @@ function VistaAlumnoContenido() {
             disabled={cargando}
             className="w-full bg-indigo-700 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition cursor-pointer"
           >
-            {cargando ? "Cargando lectura..." : "Entrar y comenzar"}
+            {cargando ? "Cargando actividad..." : "Entrar y comenzar"}
           </button>
         </form>
       </div>
@@ -265,20 +268,20 @@ function VistaAlumnoContenido() {
           <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-5 h-fit">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Documento de lectura
+                {actividad.media_url ? "Recurso audiovisual" : "Documento de lectura"}
               </h2>
-              {actividad.pdf_url && (
+              {tieneRecursoOriginal && (
                 <div className="inline-flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px] font-bold">
                   <button
                     type="button"
-                    onClick={() => setVistaLectura("pdf")}
+                    onClick={() => setVistaLectura("original")}
                     className={`px-2 py-1 rounded-md transition cursor-pointer ${
-                      vistaLectura === "pdf"
+                      vistaLectura === "original"
                         ? "bg-indigo-600 text-white shadow-xs"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    📑 Documento original
+                    {actividad.media_url ? "🎧 Vídeo / Audio" : "📑 Documento original"}
                   </button>
                   <button
                     type="button"
@@ -289,13 +292,42 @@ function VistaAlumnoContenido() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    📝 Solo texto
+                    {actividad.media_url ? "📝 Transcripción" : "📝 Solo texto"}
                   </button>
                 </div>
               )}
             </div>
 
-            {actividad.pdf_url && vistaLectura === "pdf" ? (
+            {actividad.media_url && vistaLectura === "original" ? (
+              <div className="space-y-3">
+                {actividad.media_tipo === "youtube" && (
+                  <div className="w-full aspect-video rounded-xl overflow-hidden border border-slate-300 bg-black shadow-inner">
+                    <iframe
+                      src={actividad.media_url}
+                      title={actividad.titulo}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full"
+                    />
+                  </div>
+                )}
+                {actividad.media_tipo === "video" && (
+                  <video
+                    controls
+                    src={actividad.media_url}
+                    className="w-full rounded-xl border border-slate-300 bg-black"
+                  />
+                )}
+                {actividad.media_tipo === "audio" && (
+                  <div className="bg-teal-50/70 border border-teal-200 rounded-xl p-4">
+                    <audio controls src={actividad.media_url} className="w-full" />
+                  </div>
+                )}
+                <p className="text-xs text-slate-500">
+                  Escucha atentamente el audio o vídeo tantas veces como necesites antes de responder.
+                </p>
+              </div>
+            ) : !actividad.media_url && actividad.pdf_url && vistaLectura === "original" ? (
               <div className="w-full h-[520px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
                 <iframe
                   src={`${actividad.pdf_url}#toolbar=1&navpanes=0`}

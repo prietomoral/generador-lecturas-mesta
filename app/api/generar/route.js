@@ -208,9 +208,10 @@ export async function POST(request) {
       typeof datos.instruccionRefinamiento === "string" &&
       datos.instruccionRefinamiento.trim().length > 0;
 
+    const esModoOral = datos.modoOrigen === "oral";
     const esTextoSubido =
       !esRefinamiento &&
-      datos.modoOrigen === "subir" &&
+      (datos.modoOrigen === "subir" || esModoOral) &&
       typeof datos.textoPropio === "string" &&
       datos.textoPropio.trim().length > 0;
 
@@ -242,22 +243,26 @@ REGLAS ESTRICTAS DE EDICIÓN:
 5. Devuelve el objeto JSON completo actualizado con la misma estructura exacta ("titulo", "texto", "preguntas_literales", "preguntas_inferenciales").
 `.trim();
     } else if (esTextoSubido) {
+      const etiquetaFuente = esModoOral
+        ? "TRANSCRIPCIÓN DE UN VÍDEO O AUDIO (COMPRENSIÓN ORAL)"
+        : "TEXTO PROPIO";
+
       prompt = `
-Actúa como un docente experto en comprensión lectora del IESO Sierra la Mesta (Extremadura, España).
-El docente ha proporcionado el siguiente TEXTO PROPIO para trabajar con alumnado de ${datos.edad} (complejidad de preguntas: ${datos.dificultad}).
+Actúa como un docente experto en comprensión ${esModoOral ? "oral y audiovisual" : "lectora"} del IESO Sierra la Mesta (Extremadura, España).
+El docente ha proporcionado la siguiente ${etiquetaFuente} para trabajar con alumnado de ${datos.edad} (complejidad de preguntas: ${datos.dificultad}).
 
 REGLAS ESTRICTAS:
-1. NO inventes ni resumas ni alteres el texto proporcionado. En el campo "texto" del JSON puedes devolver una cadena vacía "" o una breve confirmación, ya que el sistema conservará el texto original del docente.
+1. NO inventes ni resumas ni alteres el contenido proporcionado. En el campo "texto" del JSON puedes devolver una cadena vacía "" o una breve confirmación, ya que el sistema conservará la transcripción/texto original.
 2. ${
         tituloOriginal
           ? `Usa exactamente este título: "${tituloOriginal}".`
-          : "Propón un título breve y adecuado al texto."
+          : "Propón un título breve y adecuado al contenido."
       }
-3. Elabora exactamente ${datos.numLiterales} preguntas literales (cuya respuesta aparezca explícitamente en el texto proporcionado) y ${datos.numInferenciales} preguntas inferenciales (que requieran deducir o interpretar a partir del texto proporcionado), junto con su respuesta modelo en español de España.
+3. Elabora exactamente ${datos.numLiterales} preguntas literales (cuya respuesta aparezca explícitamente en el ${esModoOral ? "vídeo/audio" : "texto"} proporcionado) y ${datos.numInferenciales} preguntas inferenciales (que requieran deducir o interpretar la intención, tono, causas o conclusiones a partir de lo escuchado/leído), junto con su respuesta modelo en español de España.
 
---- INICIO DEL TEXTO PROPIO DEL DOCENTE ---
+--- INICIO DEL CONTENIDO PROPORCIONADO ---
 ${textoOriginal}
---- FIN DEL TEXTO PROPIO DEL DOCENTE ---
+--- FIN DEL CONTENIDO PROPORCIONADO ---
 `.trim();
     } else {
       prompt = `
@@ -287,13 +292,22 @@ y ${datos.numInferenciales} preguntas inferenciales (requieren deducción).
     if (esTextoSubido) {
       resultado = {
         ...resultado,
-        titulo: tituloOriginal || resultado.titulo || "Lectura de clase",
+        titulo: tituloOriginal || resultado.titulo || "Actividad de clase",
         texto: textoOriginal,
+        ...(esModoOral && datos.mediaUrl
+          ? { mediaUrl: datos.mediaUrl, mediaTipo: datos.mediaTipo }
+          : {}),
       };
     } else {
       resultado = {
         ...resultado,
         texto: normalizarParrafos(resultado.texto),
+        ...(datos.resultadoActual?.mediaUrl
+          ? {
+              mediaUrl: datos.resultadoActual.mediaUrl,
+              mediaTipo: datos.resultadoActual.mediaTipo,
+            }
+          : {}),
       };
     }
 

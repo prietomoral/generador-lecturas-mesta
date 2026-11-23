@@ -39,11 +39,13 @@ export default function FichaLectura({
   const [mostrarRespuestas, setMostrarRespuestas] = useState(false);
   const [codigoAula, setCodigoAula] = useState<string | null>(null);
   const [publicando, setPublicando] = useState(false);
-  const [vistaDocumento, setVistaDocumento] = useState<"pdf" | "texto">("pdf");
+  const [vistaDocumento, setVistaDocumento] = useState<"original" | "texto">("original");
 
   const [panelRefinarAbierto, setPanelRefinarAbierto] = useState(false);
   const [instruccion, setInstruccion] = useState("");
   const [historialCambios, setHistorialCambios] = useState<string[]>([]);
+
+  const tieneRecursoOriginal = Boolean(resultado.mediaUrl || pdfPreviewUrl);
 
   const parrafosTexto = (resultado.texto || "")
     .replace(/\\n/g, "\n")
@@ -60,6 +62,8 @@ export default function FichaLectura({
         titulo: resultado.titulo,
         texto: resultado.texto,
         edad,
+        media_url: resultado.mediaUrl || null,
+        media_tipo: resultado.mediaTipo || null,
         preguntas_literales: resultado.preguntas_literales || [],
         preguntas_inferenciales: resultado.preguntas_inferenciales || [],
       });
@@ -72,7 +76,7 @@ export default function FichaLectura({
       const urlAlumno = `${window.location.origin}/alumno?codigo=${codigoGenerado}`;
       navigator.clipboard?.writeText(urlAlumno);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al publicar la lectura.";
+      const msg = err instanceof Error ? err.message : "Error al publicar la actividad.";
       alert("No se pudo publicar en Supabase: " + msg);
     } finally {
       setPublicando(false);
@@ -270,7 +274,11 @@ export default function FichaLectura({
             <span className="font-bold text-lg uppercase tracking-wide">
               IESO Sierra la Mesta
             </span>
-            <span className="text-sm text-gray-600">Actividad de Comprensión Lectora</span>
+            <span className="text-sm text-gray-600">
+              {resultado.mediaUrl
+                ? "Actividad de Comprensión Oral"
+                : "Actividad de Comprensión Lectora"}
+            </span>
           </div>
           <div className="grid grid-cols-3 gap-4 text-sm pt-2">
             <div className="col-span-2">
@@ -287,20 +295,22 @@ export default function FichaLectura({
             {resultado.titulo}
           </h2>
 
-          {/* Selector entre Visor PDF original (si existe) y Texto extraído */}
-          {pdfPreviewUrl && (
+          {/* Selector entre Recurso Original (Vídeo/Audio o PDF) y Texto/Transcripción */}
+          {tieneRecursoOriginal && (
             <div className="flex justify-center mb-4 print:hidden">
               <div className="inline-flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
                 <button
                   type="button"
-                  onClick={() => setVistaDocumento("pdf")}
+                  onClick={() => setVistaDocumento("original")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    vistaDocumento === "pdf"
+                    vistaDocumento === "original"
                       ? "bg-indigo-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  📑 Ver PDF original (con imágenes y maquetación)
+                  {resultado.mediaUrl
+                    ? "🎧 Reproductor de Vídeo / Audio"
+                    : "📑 Ver PDF original (con imágenes y maquetación)"}
                 </button>
                 <button
                   type="button"
@@ -311,13 +321,45 @@ export default function FichaLectura({
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  📝 Ver texto extraído limpio
+                  {resultado.mediaUrl
+                    ? "📝 Ver transcripción extraída"
+                    : "📝 Ver texto extraído limpio"}
                 </button>
               </div>
             </div>
           )}
 
-          {pdfPreviewUrl && vistaDocumento === "pdf" && (
+          {/* Reproductor Multimedia (Comprensión Oral) */}
+          {resultado.mediaUrl && vistaDocumento === "original" && (
+            <div className="mb-4 print:hidden">
+              {resultado.mediaTipo === "youtube" && (
+                <div className="w-full aspect-video max-h-[460px] rounded-xl overflow-hidden border border-slate-300 bg-black shadow-inner">
+                  <iframe
+                    src={resultado.mediaUrl}
+                    title={resultado.titulo}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full"
+                  />
+                </div>
+              )}
+              {resultado.mediaTipo === "video" && (
+                <video
+                  controls
+                  src={resultado.mediaUrl}
+                  className="w-full max-h-[460px] rounded-xl border border-slate-300 bg-black"
+                />
+              )}
+              {resultado.mediaTipo === "audio" && (
+                <div className="bg-teal-50/60 border border-teal-200 rounded-xl p-5">
+                  <audio controls src={resultado.mediaUrl} className="w-full" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Visor PDF Original (si no es multimedia) */}
+          {!resultado.mediaUrl && pdfPreviewUrl && vistaDocumento === "original" && (
             <div className="w-full h-[540px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner mb-4 print:hidden">
               <iframe
                 src={`${pdfPreviewUrl}#toolbar=1&navpanes=0`}
@@ -329,7 +371,9 @@ export default function FichaLectura({
 
           <div
             className={`${
-              pdfPreviewUrl && vistaDocumento === "pdf" ? "hidden print:block" : "block"
+              tieneRecursoOriginal && vistaDocumento === "original"
+                ? "hidden print:block"
+                : "block"
             } space-y-4 leading-relaxed text-base sm:text-lg text-slate-700 text-justify bg-slate-50/60 p-6 rounded-xl border border-slate-100 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black print:space-y-3`}
           >
             {parrafosTexto.map((parrafo, idx) => (
@@ -403,7 +447,7 @@ export default function FichaLectura({
             </span>
           </div>
           <p className="text-base font-bold text-black mt-2">
-            Lectura: {resultado.titulo}
+            Actividad: {resultado.titulo}
           </p>
         </div>
 

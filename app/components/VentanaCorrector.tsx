@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Pregunta } from "../types/lectura";
+import { MediaTipo, Pregunta } from "../types/lectura";
 
 interface CorreccionItem {
   nivel_pregunta: string;
@@ -24,6 +24,8 @@ interface VentanaCorrectorProps {
   texto: string;
   edad: string;
   pdfPreviewUrl?: string | null;
+  mediaUrl?: string | null;
+  mediaTipo?: MediaTipo | null;
   preguntasLiterales: Pregunta[];
   preguntasInferenciales: Pregunta[];
 }
@@ -35,6 +37,8 @@ export default function VentanaCorrector({
   texto,
   edad,
   pdfPreviewUrl,
+  mediaUrl,
+  mediaTipo,
   preguntasLiterales,
   preguntasInferenciales,
 }: VentanaCorrectorProps) {
@@ -46,9 +50,11 @@ export default function VentanaCorrector({
   );
   const [corrigiendo, setCorrigiendo] = useState(false);
   const [evaluacion, setEvaluacion] = useState<ResultadoCorreccion | null>(null);
-  const [vistaLectura, setVistaLectura] = useState<"pdf" | "texto">("pdf");
+  const [vistaLectura, setVistaLectura] = useState<"original" | "texto">("original");
 
   if (!abierta) return null;
+
+  const tieneRecursoOriginal = Boolean(mediaUrl || pdfPreviewUrl);
 
   const parrafosTexto = (texto || "")
     .replace(/\\n/g, "\n")
@@ -142,26 +148,26 @@ export default function VentanaCorrector({
           </button>
         </div>
 
-        {/* Cuerpo dividido en 2 columnas: Texto/PDF a la izquierda, Preguntas a la derecha */}
+        {/* Cuerpo dividido en 2 columnas: Recurso/Texto a la izquierda, Preguntas a la derecha */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-          {/* Columna Izquierda: Documento PDF original o texto extraído */}
+          {/* Columna Izquierda: Reproductor, PDF original o texto extraído */}
           <div className="lg:col-span-5 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200 p-5 overflow-y-auto flex flex-col">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Documento de lectura
+                {mediaUrl ? "Recurso audiovisual" : "Documento de lectura"}
               </h3>
-              {pdfPreviewUrl && (
+              {tieneRecursoOriginal && (
                 <div className="inline-flex bg-slate-200/80 p-0.5 rounded-lg text-[11px] font-bold">
                   <button
                     type="button"
-                    onClick={() => setVistaLectura("pdf")}
+                    onClick={() => setVistaLectura("original")}
                     className={`px-2 py-1 rounded-md transition cursor-pointer ${
-                      vistaLectura === "pdf"
+                      vistaLectura === "original"
                         ? "bg-indigo-600 text-white shadow-xs"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    📑 PDF original
+                    {mediaUrl ? "🎧 Vídeo / Audio" : "📑 PDF original"}
                   </button>
                   <button
                     type="button"
@@ -172,7 +178,7 @@ export default function VentanaCorrector({
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    📝 Texto
+                    {mediaUrl ? "📝 Transcripción" : "📝 Texto"}
                   </button>
                 </div>
               )}
@@ -180,7 +186,36 @@ export default function VentanaCorrector({
 
             <h4 className="text-lg font-bold text-slate-900 mb-3">{titulo}</h4>
 
-            {pdfPreviewUrl && vistaLectura === "pdf" ? (
+            {mediaUrl && vistaLectura === "original" ? (
+              <div className="space-y-3">
+                {mediaTipo === "youtube" && (
+                  <div className="w-full aspect-video rounded-xl overflow-hidden border border-slate-300 bg-black shadow-inner">
+                    <iframe
+                      src={mediaUrl}
+                      title={titulo}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full"
+                    />
+                  </div>
+                )}
+                {mediaTipo === "video" && (
+                  <video
+                    controls
+                    src={mediaUrl}
+                    className="w-full rounded-xl border border-slate-300 bg-black"
+                  />
+                )}
+                {mediaTipo === "audio" && (
+                  <div className="bg-white border border-teal-200 rounded-xl p-4">
+                    <audio controls src={mediaUrl} className="w-full" />
+                  </div>
+                )}
+                <p className="text-xs text-slate-500">
+                  Escucha o visualiza el fragmento y responde a las preguntas de la derecha.
+                </p>
+              </div>
+            ) : !mediaUrl && pdfPreviewUrl && vistaLectura === "original" ? (
               <div className="flex-1 min-h-[360px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
                 <iframe
                   src={`${pdfPreviewUrl}#toolbar=1&navpanes=0`}
