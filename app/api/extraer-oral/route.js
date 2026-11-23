@@ -70,19 +70,17 @@ async function obtenerTituloYoutube(videoId) {
   }
   return `Vídeo de YouTube (${videoId})`;
 }
-
 async function extraerTranscripcionYoutube(videoId) {
   const tituloSugerido = await obtenerTituloYoutube(videoId);
   const errores = [];
 
-  // VÍA 1: youtube-transcript-plus (extrae subtítulos directamente de la página pública)
+  // VÍA 1: youtube-transcript-plus (funciona directo en local)
   for (const lang of ["es", undefined]) {
     try {
       const items = await fetchTranscript(videoId, lang ? { lang } : undefined);
       if (Array.isArray(items) && items.length > 0) {
         const transcripcion = agruparEnParrafos(items.map((i) => i.text));
         if (transcripcion.length >= 25) {
-          console.log(`✅ [extraer-oral] Transcripción obtenida vía youtube-transcript-plus (${transcripcion.length} car.)`);
           return { tituloSugerido, transcripcion };
         }
       }
@@ -91,7 +89,7 @@ async function extraerTranscripcionYoutube(videoId) {
     }
   }
 
-  // VÍA 2: youtubei.js con clientes móviles IOS / ANDROID (evitan el bloqueo de IPs de Vercel/AWS)
+  // VÍA 2: youtubei.js con clientes embebidos (TV_EMBEDDED y WEB_EMBEDDED funcionan desde IPs de Vercel)
   try {
     const youtube = await Innertube.create({
       lang: "es",
@@ -99,11 +97,10 @@ async function extraerTranscripcionYoutube(videoId) {
       retrieve_player: false,
     });
 
-    for (const cliente of ["IOS", "ANDROID", "TV_EMBEDDED", "WEB"]) {
+    for (const cliente of ["TV_EMBEDDED", "WEB_EMBEDDED", "IOS", "ANDROID"]) {
       try {
         const info = await youtube.getBasicInfo(videoId, cliente);
         const tracks = info.captions?.caption_tracks || [];
-        console.log(`ℹ️ [extraer-oral] Cliente ${cliente} -> pistas encontradas: ${tracks.length}`);
         if (tracks.length === 0) continue;
 
         const pista =
@@ -111,21 +108,26 @@ async function extraerTranscripcionYoutube(videoId) {
           tracks.find((t) => t.language_code?.startsWith("es")) ||
           tracks[0];
 
-        const resXml = await fetch(pista.base_url, {
-          headers: {
-            "User-Agent":
-              cliente === "IOS"
-                ? "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X)"
-                : "com.google.android.youtube/19.29.37 (Linux; U; Android 14) gzip",
-          },
-        });
-        const xml = await resXml.text();
-        const matches = [...xml.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)];
-        const transcripcion = agruparEnParrafos(matches.map((m) => m[1]));
+        // Probar formato json3 y XML estándar
+        for (const urlTrack of [`${pista.base_url}&fmt=json3`, pista.base_url]) {
+          const resTrack = await fetch(urlTrack);
+          if (!resTrack.ok) continue;
+          const cuerpo = await resTrack.text();
 
-        if (transcripcion.length >= 25) {
-          console.log(`✅ [extraer-oral] Transcripción obtenida vía Innertube ${cliente}`);
-          return { tituloSugerido, transcripcion };
+          let frases = [];
+          if (cuerpo.trim().startsWith("{")) {
+            const json = JSON.parse(cuerpo);
+            frases = (json.events || [])
+              .map((ev) => (ev.segs || []).map((s) => s.utf8 || "").join(""))
+              .filter(Boolean);
+          } else {
+            frases = [...cuerpo.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)].map((m) => m[1]);
+          }
+
+          const transcripcion = agruparEnParrafos(frases);
+          if (transcripcion.length >= 25) {
+            return { tituloSugerido, transcripcion };
+          }
         }
       } catch (e) {
         errores.push(`innertube(${cliente}): ${e.message}`);
@@ -135,25 +137,30 @@ async function extraerTranscripcionYoutube(videoId) {
     errores.push(`innertube-init: ${e.message}`);
   }
 
-  // VÍA 3: Fallback externo si la IP de Vercel está bloqueada
+  // VÍA 3: Extracción directa del objeto ytInitialPlayerResponse desde el HTML embebido
   try {
-    const resApi = await fetch(
-      `https://yt.lemnoslife.com/noKey/captions?part=snippet&videoId=${videoId}`
-    );
-    if (resApi.ok) {
-      const data = await resApi.json();
-      const tracks = data?.items || [];
-      const pista = tracks.find((t) => t.snippet?.language === "es") || tracks[0];
-      if (pista?.id) {
-        const resTrack = await fetch(
-          `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${pista.snippet.language}&fmt=json3`
-        );
-        if (resTrack.ok) {
-          const json = await resTrack.json();
-          const frases = (json.events || [])
-            .map((ev) => (ev.segs || []).map((s) => s.utf8 || "").join(""))
-            .filter(Boolean);
-          const transcripcion = agruparEnParrafos(frases);
+    const resEmbed = await fetch(`https://www.youtube.com/embed/${videoId}`, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "Accept-Language": "es-ES,es;q=0.9",
+      },
+    });
+    if (resEmbed.ok) {
+      const html = await resEmbed.text();
+      const match = html.match(/"captionTracks":(\[.*?\])/);
+      if (match) {
+        const tracks = JSON.parse(match[1]);
+        const pista =
+          tracks.find((t) => t.languageCode === "es" && t.kind !== "asr") ||
+          tracks.find((t) => t.languageCode?.startsWith("es")) ||
+          tracks[0];
+
+        if (pista?.baseUrl) {
+          const resXml = await fetch(pista.baseUrl);
+          const xml = await resXml.text();
+          const matches = [...xml.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)];
+          const transcripcion = agruparEnParrafos(matches.map((m) => m[1]));
           if (transcripcion.length >= 25) {
             return { tituloSugerido, transcripcion };
           }
@@ -161,12 +168,11 @@ async function extraerTranscripcionYoutube(videoId) {
       }
     }
   } catch (e) {
-    errores.push(`fallback-api: ${e.message}`);
+    errores.push(`embed-html: ${e.message}`);
   }
 
   console.warn("⚠️ [extraer-oral] Detalle de intentos fallidos:", errores);
 
-  // Devolvemos el vídeo incrustado y su título sin lanzar error 500 para que el docente pueda pegar la transcripción
   return {
     tituloSugerido,
     transcripcion: "",
