@@ -53,7 +53,6 @@ function VistaAlumnoContenido() {
 
   const sinIntentos = intentos >= MAX_INTENTOS && !superada;
   const bloqueado = superada || sinIntentos;
-  const tieneRecursoOriginal = Boolean(actividad?.media_url || actividad?.pdf_url);
 
   const parrafosTexto = (actividad?.texto || "")
     .replace(/\\n/g, "\n")
@@ -192,9 +191,14 @@ function VistaAlumnoContenido() {
           onSubmit={entrarActividad}
           className="bg-white max-w-md w-full rounded-2xl shadow-lg border border-slate-200 p-6 space-y-4"
         >
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-700">
-            IESO Sierra la Mesta · Entrenador de Comprensión
-          </span>
+          <div className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 block">
+              DialectIA · IESO Sierra la Mesta
+            </span>
+            <span className="text-xs text-slate-500 block">
+              Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
+            </span>
+          </div>
           <h1 className="text-xl font-extrabold text-slate-900">
             Acceder a la actividad de clase
           </h1>
@@ -241,6 +245,9 @@ function VistaAlumnoContenido() {
       <div className="max-w-6xl mx-auto space-y-4">
         <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-xs">
           <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 mb-0.5">
+              DialectIA · IESO Sierra la Mesta · Programa NEXO (Educalectura-Educalem)
+            </div>
             <div className="text-xs text-slate-500">
               Alumno/a: <strong className="text-slate-900">{nombreAlumno}</strong> · Código:{" "}
               <span className="font-mono font-bold">{actividad.codigo}</span>
@@ -270,7 +277,7 @@ function VistaAlumnoContenido() {
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 {actividad.media_url ? "Recurso audiovisual" : "Documento de lectura"}
               </h2>
-              {tieneRecursoOriginal && (
+              {!actividad.media_url && actividad.pdf_url && (
                 <div className="inline-flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px] font-bold">
                   <button
                     type="button"
@@ -281,7 +288,7 @@ function VistaAlumnoContenido() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    {actividad.media_url ? "🎧 Vídeo / Audio" : "📑 Documento original"}
+                    📑 Documento original
                   </button>
                   <button
                     type="button"
@@ -292,13 +299,13 @@ function VistaAlumnoContenido() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    {actividad.media_url ? "📝 Transcripción" : "📝 Solo texto"}
+                    📝 Solo texto
                   </button>
                 </div>
               )}
             </div>
 
-            {actividad.media_url && vistaLectura === "original" ? (
+            {actividad.media_url ? (
               <div className="space-y-3">
                 {actividad.media_tipo === "youtube" && (
                   <div className="w-full aspect-video rounded-xl overflow-hidden border border-slate-300 bg-black shadow-inner">
@@ -327,7 +334,7 @@ function VistaAlumnoContenido() {
                   Escucha atentamente el audio o vídeo tantas veces como necesites antes de responder.
                 </p>
               </div>
-            ) : !actividad.media_url && actividad.pdf_url && vistaLectura === "original" ? (
+            ) : actividad.pdf_url && vistaLectura === "original" ? (
               <div className="w-full h-[520px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
                 <iframe
                   src={`${actividad.pdf_url}#toolbar=1&navpanes=0`}

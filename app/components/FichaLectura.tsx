@@ -45,8 +45,6 @@ export default function FichaLectura({
   const [instruccion, setInstruccion] = useState("");
   const [historialCambios, setHistorialCambios] = useState<string[]>([]);
 
-  const tieneRecursoOriginal = Boolean(resultado.mediaUrl || pdfPreviewUrl);
-
   const parrafosTexto = (resultado.texto || "")
     .replace(/\\n/g, "\n")
     .split(/\r?\n+/)
@@ -92,6 +90,10 @@ export default function FichaLectura({
     setHistorialCambios((prev) => [...prev, textoInstruccion]);
     setInstruccion("");
   };
+
+  const mostrarSelectorVista =
+    (!resultado.mediaUrl && Boolean(pdfPreviewUrl)) ||
+    (Boolean(resultado.mediaUrl) && mostrarRespuestas);
 
   return (
     <section
@@ -300,8 +302,8 @@ export default function FichaLectura({
             {resultado.titulo}
           </h2>
 
-          {/* Selector entre Recurso Original (Vídeo/Audio o PDF) y Texto/Transcripción */}
-          {tieneRecursoOriginal && (
+          {/* Selector entre Recurso Original y Texto (en oral solo visible con Ver Solucionario) */}
+          {mostrarSelectorVista && (
             <div className="flex justify-center mb-4 print:hidden">
               <div className="inline-flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
                 <button
@@ -327,7 +329,7 @@ export default function FichaLectura({
                   }`}
                 >
                   {resultado.mediaUrl
-                    ? "📝 Ver transcripción extraída"
+                    ? "📝 Ver transcripción (solo docente)"
                     : "📝 Ver texto extraído limpio"}
                 </button>
               </div>
@@ -335,7 +337,7 @@ export default function FichaLectura({
           )}
 
           {/* Reproductor Multimedia (Comprensión Oral) */}
-          {resultado.mediaUrl && vistaDocumento === "original" && (
+          {resultado.mediaUrl && (!mostrarRespuestas || vistaDocumento === "original") && (
             <div className="mb-4 print:hidden">
               {resultado.mediaTipo === "youtube" && (
                 <div className="w-full aspect-video max-h-[460px] rounded-xl overflow-hidden border border-slate-300 bg-black shadow-inner">
@@ -376,7 +378,11 @@ export default function FichaLectura({
 
           <div
             className={`${
-              tieneRecursoOriginal && vistaDocumento === "original"
+              resultado.mediaUrl
+                ? mostrarRespuestas && vistaDocumento === "texto"
+                  ? "block"
+                  : "hidden print:block"
+                : pdfPreviewUrl && vistaDocumento === "original"
                 ? "hidden print:block"
                 : "block"
             } space-y-4 leading-relaxed text-base sm:text-lg text-slate-700 text-justify bg-slate-50/60 p-6 rounded-xl border border-slate-100 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black print:space-y-3`}

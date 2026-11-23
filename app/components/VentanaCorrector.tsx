@@ -54,8 +54,6 @@ export default function VentanaCorrector({
 
   if (!abierta) return null;
 
-  const tieneRecursoOriginal = Boolean(mediaUrl || pdfPreviewUrl);
-
   const parrafosTexto = (texto || "")
     .replace(/\\n/g, "\n")
     .split(/\r?\n+/)
@@ -150,13 +148,13 @@ export default function VentanaCorrector({
 
         {/* Cuerpo dividido en 2 columnas: Recurso/Texto a la izquierda, Preguntas a la derecha */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-          {/* Columna Izquierda: Reproductor, PDF original o texto extraído */}
+          {/* Columna Izquierda: Reproductor (si es oral), PDF original o texto */}
           <div className="lg:col-span-5 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200 p-5 overflow-y-auto flex flex-col">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 {mediaUrl ? "Recurso audiovisual" : "Documento de lectura"}
               </h3>
-              {tieneRecursoOriginal && (
+              {!mediaUrl && pdfPreviewUrl && (
                 <div className="inline-flex bg-slate-200/80 p-0.5 rounded-lg text-[11px] font-bold">
                   <button
                     type="button"
@@ -167,7 +165,7 @@ export default function VentanaCorrector({
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    {mediaUrl ? "🎧 Vídeo / Audio" : "📑 PDF original"}
+                    📑 PDF original
                   </button>
                   <button
                     type="button"
@@ -178,7 +176,7 @@ export default function VentanaCorrector({
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    {mediaUrl ? "📝 Transcripción" : "📝 Texto"}
+                    📝 Texto
                   </button>
                 </div>
               )}
@@ -186,7 +184,7 @@ export default function VentanaCorrector({
 
             <h4 className="text-lg font-bold text-slate-900 mb-3">{titulo}</h4>
 
-            {mediaUrl && vistaLectura === "original" ? (
+            {mediaUrl ? (
               <div className="space-y-3">
                 {mediaTipo === "youtube" && (
                   <div className="w-full aspect-video rounded-xl overflow-hidden border border-slate-300 bg-black shadow-inner">
@@ -212,10 +210,10 @@ export default function VentanaCorrector({
                   </div>
                 )}
                 <p className="text-xs text-slate-500">
-                  Escucha o visualiza el fragmento y responde a las preguntas de la derecha.
+                  Escucha o visualiza el fragmento tantas veces como necesites y responde a las preguntas de la derecha.
                 </p>
               </div>
-            ) : !mediaUrl && pdfPreviewUrl && vistaLectura === "original" ? (
+            ) : pdfPreviewUrl && vistaLectura === "original" ? (
               <div className="flex-1 min-h-[360px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
                 <iframe
                   src={`${pdfPreviewUrl}#toolbar=1&navpanes=0`}
