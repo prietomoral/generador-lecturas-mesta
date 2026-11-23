@@ -202,7 +202,14 @@ export async function POST(request) {
   try {
     const datos = await request.json();
 
+    const esRefinamiento =
+      datos.esRefinamiento === true &&
+      datos.resultadoActual &&
+      typeof datos.instruccionRefinamiento === "string" &&
+      datos.instruccionRefinamiento.trim().length > 0;
+
     const esTextoSubido =
+      !esRefinamiento &&
       datos.modoOrigen === "subir" &&
       typeof datos.textoPropio === "string" &&
       datos.textoPropio.trim().length > 0;
@@ -213,8 +220,29 @@ export async function POST(request) {
         ? datos.tituloPropio.trim()
         : "";
 
-    const prompt = esTextoSubido
-      ? `
+    let prompt = "";
+
+    if (esRefinamiento) {
+      prompt = `
+Actúa como un docente experto en comprensión lectora del IESO Sierra la Mesta (Extremadura, España).
+Tienes esta actividad de lectura ya generada (para alumnado de ${datos.edad}):
+
+--- ACTIVIDAD ACTUAL (JSON) ---
+${JSON.stringify(datos.resultadoActual, null, 2)}
+--- FIN ACTIVIDAD ACTUAL ---
+
+INSTRUCCIÓN DE AJUSTE DEL DOCENTE:
+"${datos.instruccionRefinamiento.trim()}"
+
+REGLAS ESTRICTAS DE EDICIÓN:
+1. Aplica ÚNICAMENTE los cambios solicitados por el docente en su instrucción (tono, extensión, vocabulario, enfoque de algún párrafo o ajuste en las preguntas).
+2. Conserva intacto todo lo que el docente no haya pedido cambiar.
+3. Si modificas el texto, asegúrate de que las respuestas modelo de las preguntas literales e inferenciales sigan siendo 100% coherentes con el nuevo texto.
+4. Mantén el texto dividido en párrafos claros separados por doble salto de línea (\\n\\n).
+5. Devuelve el objeto JSON completo actualizado con la misma estructura exacta ("titulo", "texto", "preguntas_literales", "preguntas_inferenciales").
+`.trim();
+    } else if (esTextoSubido) {
+      prompt = `
 Actúa como un docente experto en comprensión lectora del IESO Sierra la Mesta (Extremadura, España).
 El docente ha proporcionado el siguiente TEXTO PROPIO para trabajar con alumnado de ${datos.edad} (complejidad de preguntas: ${datos.dificultad}).
 
@@ -230,8 +258,9 @@ REGLAS ESTRICTAS:
 --- INICIO DEL TEXTO PROPIO DEL DOCENTE ---
 ${textoOriginal}
 --- FIN DEL TEXTO PROPIO DEL DOCENTE ---
-`.trim()
-      : `
+`.trim();
+    } else {
+      prompt = `
 Actúa como un docente experto en comprensión lectora del IESO Sierra la Mesta (Extremadura, España). Genera una actividad en español de España con:
 - Edad del alumnado: ${datos.edad}
 - Tipo de texto: ${datos.tipoTexto}
@@ -247,6 +276,7 @@ REGLAS DE ESTRUCTURA Y PÁRRAFOS:
 Genera exactamente ${datos.numLiterales} preguntas literales (respuesta explícita en el texto) 
 y ${datos.numInferenciales} preguntas inferenciales (requieren deducción).
 `.trim();
+    }
 
     let resultado = await intentarConGoogle(prompt);
     if (!resultado) {

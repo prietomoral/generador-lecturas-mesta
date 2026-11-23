@@ -34,6 +34,7 @@ export default function GeneradorLectura() {
 
   const [resultado, setResultado] = useState<ResultadoLectura | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [refinando, setRefinando] = useState(false);
   const [segundosRestantes, setSegundosRestantes] = useState(TIEMPO_LIMITE_SEGUNDOS);
   const [avisoExito, setAvisoExito] = useState(false);
   const [ventanaCorrectorAbierta, setVentanaCorrectorAbierta] = useState(false);
@@ -137,6 +138,37 @@ export default function GeneradorLectura() {
     }
   };
 
+  const handleRefinar = async (instruccionRefinamiento: string) => {
+    if (!resultado) return;
+    setRefinando(true);
+    setAvisoExito(false);
+
+    try {
+      const res = await fetch("/api/generar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          esRefinamiento: true,
+          edad: form.edad,
+          resultadoActual: resultado,
+          instruccionRefinamiento,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "No se pudo aplicar el ajuste.");
+      }
+
+      setResultado(data);
+      setAvisoExito(true);
+    } catch (err: unknown) {
+      const mensaje = err instanceof Error ? err.message : "No se pudo ajustar la lectura.";
+      alert("Error al ajustar: " + mensaje);
+    } finally {
+      setRefinando(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-16 print:bg-white print:pb-0">
       <header className="bg-gradient-to-r from-blue-800 via-blue-700 to-indigo-800 text-white shadow-md print:hidden">
@@ -166,12 +198,13 @@ export default function GeneradorLectura() {
         {resultado && (
           <>
             <FichaLectura
-              key={resultado.titulo}
               resultado={resultado}
               edad={form.edad}
               avisoExito={avisoExito}
               onCerrarAviso={() => setAvisoExito(false)}
               onAbrirCorrector={() => setVentanaCorrectorAbierta(true)}
+              onRefinarResultado={handleRefinar}
+              refinando={refinando}
               seccionRef={seccionResultadoRef}
             />
 

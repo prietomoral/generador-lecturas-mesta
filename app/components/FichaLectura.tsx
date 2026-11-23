@@ -11,8 +11,18 @@ interface FichaLecturaProps {
   avisoExito: boolean;
   onCerrarAviso: () => void;
   onAbrirCorrector: () => void;
+  onRefinarResultado: (instruccion: string) => Promise<void>;
+  refinando: boolean;
   seccionRef: React.RefObject<HTMLElement | null>;
 }
+
+const SUGERENCIAS_RAPIDAS = [
+  "Haz el texto un poco más breve",
+  "Simplifica el vocabulario (nivel NEAE)",
+  "Dale un tono más cercano y narrativo",
+  "Añade un párrafo final con moraleja",
+  "Haz las preguntas un poco más desafiantes",
+];
 
 export default function FichaLectura({
   resultado,
@@ -20,11 +30,17 @@ export default function FichaLectura({
   avisoExito,
   onCerrarAviso,
   onAbrirCorrector,
+  onRefinarResultado,
+  refinando,
   seccionRef,
 }: FichaLecturaProps) {
   const [mostrarRespuestas, setMostrarRespuestas] = useState(false);
   const [codigoAula, setCodigoAula] = useState<string | null>(null);
   const [publicando, setPublicando] = useState(false);
+
+  const [panelRefinarAbierto, setPanelRefinarAbierto] = useState(false);
+  const [instruccion, setInstruccion] = useState("");
+  const [historialCambios, setHistorialCambios] = useState<string[]>([]);
 
   const parrafosTexto = (resultado.texto || "")
     .replace(/\\n/g, "\n")
@@ -60,6 +76,16 @@ export default function FichaLectura({
     }
   };
 
+  const manejarEnvioRefinamiento = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const textoInstruccion = instruccion.trim();
+    if (!textoInstruccion || refinando) return;
+
+    await onRefinarResultado(textoInstruccion);
+    setHistorialCambios((prev) => [...prev, textoInstruccion]);
+    setInstruccion("");
+  };
+
   return (
     <section
       ref={seccionRef}
@@ -73,7 +99,7 @@ export default function FichaLectura({
               ✓
             </span>
             <div className="text-sm">
-              <strong>¡Actividad generada correctamente!</strong> Ya puedes revisarla, descargarla en PDF o compartirla con tu clase.
+              <strong>¡Actividad lista!</strong> Ya puedes revisarla, ajustarla con instrucciones, descargarla en PDF o compartirla con tu clase.
             </div>
           </div>
           <button
@@ -103,6 +129,18 @@ export default function FichaLectura({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setPanelRefinarAbierto(!panelRefinarAbierto)}
+            className={`text-sm px-4 py-2 rounded-lg font-bold shadow-sm transition cursor-pointer ${
+              panelRefinarAbierto
+                ? "bg-amber-600 text-white"
+                : "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300"
+            }`}
+          >
+            💬 {panelRefinarAbierto ? "Ocultar ajustes IA" : "Ajustar texto / preguntas"}
+          </button>
+
           {!codigoAula && (
             <button
               type="button"
@@ -139,6 +177,80 @@ export default function FichaLectura({
           </button>
         </div>
       </div>
+
+      {/* PANEL DE ITERACIÓN / CONVERSACIÓN CON LA IA */}
+      {panelRefinarAbierto && (
+        <div className="bg-amber-50/70 border-2 border-amber-200 rounded-2xl p-4 sm:p-5 space-y-3.5 print:hidden">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+                Asistente de Edición Docente
+              </span>
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
+                ¿Qué quieres ajustar en esta actividad?
+              </h3>
+            </div>
+            {historialCambios.length > 0 && (
+              <span className="text-xs font-semibold bg-white border border-amber-200 text-amber-900 px-2.5 py-1 rounded-full">
+                {historialCambios.length}{" "}
+                {historialCambios.length === 1 ? "ajuste aplicado" : "ajustes aplicados"}
+              </span>
+            )}
+          </div>
+
+          {historialCambios.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 text-xs">
+              {historialCambios.map((item, idx) => (
+                <span
+                  key={idx}
+                  className="bg-white/90 border border-amber-200 text-slate-700 px-2.5 py-1 rounded-lg"
+                >
+                  ✓ {item}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-1.5">
+            {SUGERENCIAS_RAPIDAS.map((sug) => (
+              <button
+                key={sug}
+                type="button"
+                disabled={refinando}
+                onClick={() => setInstruccion(sug)}
+                className="text-xs bg-white hover:bg-amber-100 text-amber-950 border border-amber-200 px-2.5 py-1 rounded-lg transition cursor-pointer disabled:opacity-50"
+              >
+                + {sug}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={manejarEnvioRefinamiento} className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              disabled={refinando}
+              placeholder="Ej: Acorta el segundo párrafo, cambia el tono a más humorístico o añade un dato sobre Extremadura..."
+              value={instruccion}
+              onChange={(e) => setInstruccion(e.target.value)}
+              className="flex-1 bg-white border border-amber-300 text-slate-800 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+            />
+            <button
+              type="submit"
+              disabled={refinando || !instruccion.trim()}
+              className="bg-amber-700 hover:bg-amber-600 disabled:bg-slate-400 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-xs transition cursor-pointer shrink-0 flex items-center justify-center gap-2"
+            >
+              {refinando ? (
+                <>
+                  <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                  <span>Aplicando cambio...</span>
+                </>
+              ) : (
+                <span>🪄 Aplicar ajuste</span>
+              )}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Panel de seguimiento en vivo si ya se ha compartido con la clase */}
       {codigoAula && (
