@@ -13,6 +13,7 @@ interface FichaLecturaProps {
   onCerrarAviso: () => void;
   onAbrirCorrector: () => void;
   onRefinarResultado: (instruccion: string) => Promise<void>;
+  onActualizarResultado: (nuevoResultado: ResultadoLectura) => void;
   refinando: boolean;
   seccionRef: React.RefObject<HTMLElement | null>;
 }
@@ -33,10 +34,20 @@ export default function FichaLectura({
   onCerrarAviso,
   onAbrirCorrector,
   onRefinarResultado,
+  onActualizarResultado,
   refinando,
   seccionRef,
 }: FichaLecturaProps) {
   const [mostrarRespuestas, setMostrarRespuestas] = useState(false);
+
+  // Estado local aislado para editar sin mover el scroll ni re-renderizar al teclear
+  const [itemEditando, setItemEditando] = useState<{
+    tipo: "literales" | "inferenciales";
+    indice: number;
+  } | null>(null);
+  const [borradorPregunta, setBorradorPregunta] = useState("");
+  const [borradorRespuesta, setBorradorRespuesta] = useState("");
+
   const [codigoAula, setCodigoAula] = useState<string | null>(null);
   const [publicando, setPublicando] = useState(false);
   const [vistaDocumento, setVistaDocumento] = useState<"original" | "texto">("original");
@@ -51,7 +62,96 @@ export default function FichaLectura({
     .map((p) => p.trim())
     .filter(Boolean);
 
+  const iniciarEdicion = (tipo: "literales" | "inferenciales", indice: number) => {
+    // Si había otra abierta, guarda primero sus cambios
+    if (itemEditando) {
+      guardarEdicionActual();
+    }
+    const clave = tipo === "literales" ? "preguntas_literales" : "preguntas_inferenciales";
+    const item = resultado[clave]?.[indice];
+    if (!item) return;
+
+    setBorradorPregunta(item.pregunta);
+    setBorradorRespuesta(item.respuesta);
+    setItemEditando({ tipo, indice });
+  };
+
+  const guardarEdicionActual = () => {
+    if (!itemEditando) return;
+    const { tipo, indice } = itemEditando;
+    const clave = tipo === "literales" ? "preguntas_literales" : "preguntas_inferenciales";
+    const listaActual = [...(resultado[clave] || [])];
+
+    if (listaActual[indice]) {
+      listaActual[indice] = {
+        pregunta: borradorPregunta,
+        respuesta: borradorRespuesta,
+      };
+      onActualizarResultado({
+        ...resultado,
+        [clave]: listaActual,
+      });
+    }
+    setItemEditando(null);
+  };
+
+  const eliminarPregunta = (tipo: "literales" | "inferenciales", indice: number) => {
+    const clave = tipo === "literales" ? "preguntas_literales" : "preguntas_inferenciales";
+    const listaActual = (resultado[clave] || []).filter((_, i) => i !== indice);
+    onActualizarResultado({
+      ...resultado,
+      [clave]: listaActual,
+    });
+    if (itemEditando?.tipo === tipo && itemEditando?.indice === indice) {
+      setItemEditando(null);
+    }
+  };
+
+  const anadirPreguntaManual = (tipo: "literales" | "inferenciales") => {
+    const clave = tipo === "literales" ? "preguntas_literales" : "preguntas_inferenciales";
+    let baseResultado = resultado;
+
+    // Si estaba editando otra, consolidar antes de añadir
+    if (itemEditando) {
+      const clavePrev =
+        itemEditando.tipo === "literales" ? "preguntas_literales" : "preguntas_inferenciales";
+      const copiaPrev = [...(resultado[clavePrev] || [])];
+      if (copiaPrev[itemEditando.indice]) {
+        copiaPrev[itemEditando.indice] = {
+          pregunta: borradorPregunta,
+          respuesta: borradorRespuesta,
+        };
+        baseResultado = { ...resultado, [clavePrev]: copiaPrev };
+      }
+    }
+
+    const actual = baseResultado[clave] || [];
+    const nuevoIndice = actual.length;
+    onActualizarResultado({
+      ...baseResultado,
+      [clave]: [...actual, { pregunta: "", respuesta: "" }],
+    });
+
+    setBorradorPregunta("");
+    setBorradorRespuesta("");
+    setItemEditando({ tipo, indice: nuevoIndice });
+  };
+
   const publicarParaClase = async () => {
+    if (itemEditando) guardarEdicionActual();
+
+    const literalesValidas = (resultado.preguntas_literales || []).filter((p) =>
+      p.pregunta.trim()
+    );
+    const inferencialesValidas = (resultado.preguntas_inferenciales || []).filter((p) =>
+      p.pregunta.trim()
+    );
+
+    if (literalesValidas.length === 0 && inferencialesValidas.length === 0) {
+      alert("Añade al menos una pregunta con enunciado antes de compartir con la clase.");
+      return;
+    }
+
     setPublicando(true);
     try {
       const codigoGenerado = `MESTA-${Math.floor(100 + Math.random() * 900)}`;
@@ -62,8 +162,8 @@ export default function FichaLectura({
         edad,
         media_url: resultado.mediaUrl || null,
         media_tipo: resultado.mediaTipo || null,
-        preguntas_literales: resultado.preguntas_literales || [],
-        preguntas_inferenciales: resultado.preguntas_inferenciales || [],
+        preguntas_literales: literalesValidas,
+        preguntas_inferenciales: inferencialesValidas,
       });
 
       if (error) {
@@ -86,6 +186,7 @@ export default function FichaLectura({
     const textoInstruccion = instruccion.trim();
     if (!textoInstruccion || refinando) return;
 
+    setItemEditando(null);
     await onRefinarResultado(textoInstruccion);
     setHistorialCambios((prev) => [...prev, textoInstruccion]);
     setInstruccion("");
@@ -94,6 +195,149 @@ export default function FichaLectura({
   const mostrarSelectorVista =
     (!resultado.mediaUrl && Boolean(pdfPreviewUrl)) ||
     (Boolean(resultado.mediaUrl) && mostrarRespuestas);
+
+  const renderBloquePreguntas = (
+    tipo: "literales" | "inferenciales",
+    lista: { pregunta: string; respuesta: string }[]
+  ) => {
+    const esLiteral = tipo === "literales";
+    const estiloCajaEdicion = esLiteral
+      ? "border-blue-300 bg-blue-50/50"
+      : "border-indigo-300 bg-indigo-50/50";
+    const estiloBotonGuardar = esLiteral
+      ? "bg-blue-700 hover:bg-blue-600"
+      : "bg-indigo-700 hover:bg-indigo-600";
+
+    return (
+      <>
+        {lista.length === 0 ? (
+          <p className="text-xs text-slate-500 italic py-1 print:hidden">
+            No hay preguntas en este bloque. Pulsa el botón de abajo para añadir una.
+          </p>
+        ) : (
+          <ol className="list-decimal pl-5 space-y-4">
+            {lista.map((item, i) => {
+              const enEdicion =
+                itemEditando?.tipo === tipo && itemEditando?.indice === i;
+
+              return (
+                <li key={`${tipo}-${i}`} className="break-inside-avoid">
+                  {enEdicion ? (
+                    <div
+                      className={`border-2 ${estiloCajaEdicion} rounded-xl p-4 space-y-3 print:hidden`}
+                    >
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Enunciado de la pregunta
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Escribe aquí el enunciado..."
+                          value={borradorPregunta}
+                          onChange={(e) => setBorradorPregunta(e.target.value)}
+                          className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-emerald-800 mb-1">
+                          Respuesta modelo (para solucionario y entrenador IA)
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Escribe la respuesta esperada..."
+                          value={borradorRespuesta}
+                          onChange={(e) => setBorradorRespuesta(e.target.value)}
+                          className="w-full bg-white border border-emerald-200 rounded-lg p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <button
+                          type="button"
+                          onClick={() => eliminarPregunta(tipo, i)}
+                          className="text-xs font-semibold text-rose-600 hover:text-rose-800 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 cursor-pointer"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={guardarEdicionActual}
+                          className={`text-xs font-bold text-white px-4 py-1.5 rounded-lg shadow-xs cursor-pointer ${estiloBotonGuardar}`}
+                        >
+                          ✓ Guardar pregunta
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="group flex items-start justify-between gap-3 rounded-xl p-1.5 -ml-1.5 hover:bg-slate-50 transition">
+                      <div
+                        onClick={() => iniciarEdicion(tipo, i)}
+                        className="flex-1 cursor-pointer"
+                      >
+                        <p className="font-medium text-slate-900">
+                          {item.pregunta || (
+                            <span className="italic text-slate-400">
+                              (Sin enunciado — haz clic para escribir)
+                            </span>
+                          )}
+                        </p>
+                        {mostrarRespuestas && (
+                          <p className="text-emerald-800 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:hidden">
+                            <strong>Respuesta:</strong>{" "}
+                            {item.respuesta || (
+                              <span className="italic text-emerald-700/70">
+                                Sin respuesta modelo
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0 print:hidden">
+                        <button
+                          type="button"
+                          onClick={() => iniciarEdicion(tipo, i)}
+                          className="text-xs font-semibold text-slate-600 hover:text-indigo-700 bg-white border border-slate-200 hover:border-indigo-300 px-2.5 py-1 rounded-lg shadow-2xs cursor-pointer"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => eliminarPregunta(tipo, i)}
+                          title="Eliminar pregunta"
+                          className="text-xs font-semibold text-slate-500 hover:text-rose-700 bg-white border border-slate-200 hover:border-rose-300 px-2 py-1 rounded-lg shadow-2xs cursor-pointer"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="hidden print:block mt-3 space-y-5">
+                    <div className="border-b border-gray-400 h-4" />
+                    <div className="border-b border-gray-400 h-4" />
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+
+        <div className="pt-1 print:hidden">
+          <button
+            type="button"
+            onClick={() => anadirPreguntaManual(tipo)}
+            className={`text-xs font-bold px-3.5 py-2 rounded-lg border transition cursor-pointer ${
+              esLiteral
+                ? "bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200"
+                : "bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200"
+            }`}
+          >
+            {esLiteral ? "+ Añadir pregunta literal" : "+ Añadir pregunta inferencial"}
+          </button>
+        </div>
+      </>
+    );
+  };
 
   return (
     <section
@@ -108,7 +352,7 @@ export default function FichaLectura({
               ✓
             </span>
             <div className="text-sm">
-              <strong>¡Actividad lista!</strong> Ya puedes revisarla, ajustarla con instrucciones, descargarla en PDF o compartirla con tu clase.
+              <strong>¡Actividad lista!</strong> Puedes editar cualquier pregunta pulsando <strong>✏️ Editar</strong> o añadir las tuyas propias debajo de cada bloque.
             </div>
           </div>
           <button
@@ -147,7 +391,7 @@ export default function FichaLectura({
                 : "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300"
             }`}
           >
-            💬 {panelRefinarAbierto ? "Ocultar ajustes IA" : "Ajustar texto / preguntas"}
+            💬 {panelRefinarAbierto ? "Ocultar ajustes IA" : "Ajustar texto / preguntas IA"}
           </button>
 
           {!codigoAula && (
@@ -163,7 +407,10 @@ export default function FichaLectura({
 
           <button
             type="button"
-            onClick={onAbrirCorrector}
+            onClick={() => {
+              if (itemEditando) guardarEdicionActual();
+              onAbrirCorrector();
+            }}
             className="text-sm bg-indigo-700 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition cursor-pointer"
           >
             ✍️ Probar corrección IA
@@ -179,7 +426,10 @@ export default function FichaLectura({
 
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => {
+              if (itemEditando) guardarEdicionActual();
+              setTimeout(() => window.print(), 50);
+            }}
             className="text-sm bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-semibold shadow-sm transition cursor-pointer"
           >
             🖨️ Descargar PDF
@@ -397,53 +647,21 @@ export default function FichaLectura({
 
         <hr className="border-slate-200 my-6 print:border-gray-300" />
 
-        {resultado.preguntas_literales?.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-blue-700 bg-blue-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
-              1. Comprensión Literal
-            </h3>
-            <ol className="list-decimal pl-5 space-y-5">
-              {resultado.preguntas_literales.map((item, i) => (
-                <li key={i} className="break-inside-avoid">
-                  <p className="font-medium text-slate-900">{item.pregunta}</p>
-                  {mostrarRespuestas && (
-                    <p className="text-emerald-800 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:hidden">
-                      <strong>Respuesta:</strong> {item.respuesta}
-                    </p>
-                  )}
-                  <div className="hidden print:block mt-3 space-y-5">
-                    <div className="border-b border-gray-400 h-4" />
-                    <div className="border-b border-gray-400 h-4" />
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
+        {/* SECCIÓN 1: PREGUNTAS LITERALES */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold text-blue-700 bg-blue-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
+            1. Comprensión Literal
+          </h3>
+          {renderBloquePreguntas("literales", resultado.preguntas_literales || [])}
+        </div>
 
-        {resultado.preguntas_inferenciales?.length > 0 && (
-          <div className="space-y-4 pt-6">
-            <h3 className="text-sm font-bold text-indigo-700 bg-indigo-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
-              2. Comprensión Inferencial
-            </h3>
-            <ol className="list-decimal pl-5 space-y-5">
-              {resultado.preguntas_inferenciales.map((item, i) => (
-                <li key={i} className="break-inside-avoid">
-                  <p className="font-medium text-slate-900">{item.pregunta}</p>
-                  {mostrarRespuestas && (
-                    <p className="text-emerald-800 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:hidden">
-                      <strong>Respuesta:</strong> {item.respuesta}
-                    </p>
-                  )}
-                  <div className="hidden print:block mt-3 space-y-5">
-                    <div className="border-b border-gray-400 h-4" />
-                    <div className="border-b border-gray-400 h-4" />
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
+        {/* SECCIÓN 2: PREGUNTAS INFERENCIALES */}
+        <div className="space-y-3 pt-6">
+          <h3 className="text-sm font-bold text-indigo-700 bg-indigo-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
+            2. Comprensión Inferencial
+          </h3>
+          {renderBloquePreguntas("inferenciales", resultado.preguntas_inferenciales || [])}
+        </div>
       </div>
 
       {/* BLOQUE 2 (SOLO PDF): SOLUCIONARIO EN HOJA APARTE */}

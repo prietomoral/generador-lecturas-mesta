@@ -24,7 +24,6 @@ export default function GeneradorLectura() {
     numInferenciales: 2,
   });
 
-  // Al cargar en el navegador, elige un tema aleatorio no repetido
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
@@ -41,6 +40,7 @@ export default function GeneradorLectura() {
   const [ventanaCorrectorAbierta, setVentanaCorrectorAbierta] = useState(false);
 
   const seccionResultadoRef = useRef<HTMLElement | null>(null);
+  const debeHacerScrollRef = useRef(false);
 
   useEffect(() => {
     if (!cargando) return;
@@ -51,7 +51,8 @@ export default function GeneradorLectura() {
   }, [cargando]);
 
   useEffect(() => {
-    if (!resultado) return;
+    if (!resultado || !debeHacerScrollRef.current) return;
+    debeHacerScrollRef.current = false;
 
     const timerScroll = setTimeout(() => {
       seccionResultadoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -113,7 +114,6 @@ export default function GeneradorLectura() {
         throw new Error(data.error || "Error en la respuesta del servidor");
       }
 
-      // Doble garantía: conserva el texto/transcripción original y los datos multimedia si es oral
       const esContenidoPropio =
         (form.modoOrigen === "subir" || form.modoOrigen === "oral") &&
         Boolean(form.textoPropio?.trim());
@@ -129,6 +129,7 @@ export default function GeneradorLectura() {
           }
         : data;
 
+      debeHacerScrollRef.current = true;
       setResultado(resultadoFinal);
       setAvisoExito(true);
     } catch (err: unknown) {
@@ -166,6 +167,7 @@ export default function GeneradorLectura() {
         throw new Error(data.error || "No se pudo aplicar el ajuste.");
       }
 
+      debeHacerScrollRef.current = true;
       setResultado({
         ...data,
         ...(resultado.mediaUrl
@@ -220,6 +222,7 @@ export default function GeneradorLectura() {
               onCerrarAviso={() => setAvisoExito(false)}
               onAbrirCorrector={() => setVentanaCorrectorAbierta(true)}
               onRefinarResultado={handleRefinar}
+              onActualizarResultado={setResultado}
               refinando={refinando}
               seccionRef={seccionResultadoRef}
             />
