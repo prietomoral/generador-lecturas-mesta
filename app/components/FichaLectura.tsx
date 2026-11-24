@@ -2,8 +2,10 @@
 
 import React, { useState } from "react";
 import { ResultadoLectura } from "../types/lectura";
+import { ConfigMision } from "../types/gamificacion";
 import { supabase } from "../lib/supabase";
 import PanelSeguimientoClase from "./PanelSeguimientoClase";
+import ConfiguradorMisionDocente from "./ConfiguradorMisionDocente";
 
 interface FichaLecturaProps {
   resultado: ResultadoLectura;
@@ -54,6 +56,13 @@ export default function FichaLectura({
   const [borradorResumenModelo, setBorradorResumenModelo] = useState(
     resultado.resumen_modelo || ""
   );
+
+  const [mision, setMision] = useState<ConfigMision>({
+    activa: false,
+    tituloMision: "",
+    narrativa: "",
+    metaPuntos: 400,
+  });
 
   const [codigoAula, setCodigoAula] = useState<string | null>(null);
   const [publicando, setPublicando] = useState(false);
@@ -218,6 +227,7 @@ export default function FichaLectura({
           ? borradorResumenModelo
           : resultado.resumen_modelo || null,
         bloqueo_secuencial: bloqueoSecuencial,
+        config_mision: mision.activa ? mision : null,
       });
 
       if (error) {
@@ -515,6 +525,11 @@ export default function FichaLectura({
           </button>
         </div>
       </div>
+
+      {/* Configurador independiente de Modo Misión antes de publicar */}
+      {!codigoAula && (
+        <ConfiguradorMisionDocente mision={mision} onChange={setMision} />
+      )}
 
       {/* PANEL DE ITERACIÓN / CONVERSACIÓN CON LA IA */}
       {panelRefinarAbierto && (
