@@ -13,11 +13,57 @@ const NIVELES_ESCALA = [
   "Altamente Conseguido",
 ];
 
+function esNivelDominado(nivel?: string): boolean {
+  return nivel === "Conseguido" || nivel === "Altamente Conseguido";
+}
+
 function calcularMediaNiveles(nivelComp: string, nivelExpr: string): string {
   const idxComp = Math.max(0, NIVELES_ESCALA.indexOf(nivelComp));
   const idxExpr = Math.max(0, NIVELES_ESCALA.indexOf(nivelExpr));
   const mediaIdx = Math.floor((idxComp + idxExpr) / 2);
   return NIVELES_ESCALA[mediaIdx] || "No conseguido";
+}
+
+function calcularNivelGlobalActividad(
+  totalLiterales: number,
+  totalInferenciales: number,
+  tieneResumen: boolean,
+  corrLit: CorreccionItem[],
+  corrInf: CorreccionItem[],
+  corrRes?: CorreccionItem | null
+): { compGlobal: string; exprGlobal: string; mediaGlobal: string } {
+  const items: (CorreccionItem | undefined | null)[] = [];
+
+  for (let i = 0; i < totalLiterales; i++) items.push(corrLit[i]);
+  for (let i = 0; i < totalInferenciales; i++) items.push(corrInf[i]);
+  if (tieneResumen) items.push(corrRes);
+
+  if (items.length === 0) {
+    return {
+      compGlobal: "No conseguido",
+      exprGlobal: "No conseguido",
+      mediaGlobal: "No conseguido",
+    };
+  }
+
+  let sumaComp = 0;
+  let sumaExpr = 0;
+
+  for (const item of items) {
+    const idxC = item ? Math.max(0, NIVELES_ESCALA.indexOf(item.nivel_comprension)) : 0;
+    const idxE = item ? Math.max(0, NIVELES_ESCALA.indexOf(item.nivel_expresion)) : 0;
+    sumaComp += idxC;
+    sumaExpr += idxE;
+  }
+
+  const avgCompIdx = Math.floor(sumaComp / items.length);
+  const avgExprIdx = Math.floor(sumaExpr / items.length);
+
+  const compGlobal = NIVELES_ESCALA[avgCompIdx] || "No conseguido";
+  const exprGlobal = NIVELES_ESCALA[avgExprIdx] || "No conseguido";
+  const mediaGlobal = calcularMediaNiveles(compGlobal, exprGlobal);
+
+  return { compGlobal, exprGlobal, mediaGlobal };
 }
 
 interface Pregunta {
@@ -37,6 +83,7 @@ interface Actividad {
   preguntas_inferenciales: Pregunta[];
   resumen_min_palabras?: number | null;
   resumen_modelo?: string | null;
+  bloqueo_secuencial?: boolean | null;
 }
 
 interface CorreccionItem {
@@ -56,7 +103,17 @@ interface ResultadoCorreccion {
   correcciones_literales: CorreccionItem[];
   correcciones_inferenciales: CorreccionItem[];
   correccion_resumen?: CorreccionItem | null;
+  progreso_pasos?: {
+    dominados: number;
+    total: number;
+    paso_actual_etiqueta: string;
+  };
 }
+
+type PasoSecuencial =
+  | { tipo: "literal"; indice: number; pregunta: Pregunta; etiqueta: string }
+  | { tipo: "inferencial"; indice: number; pregunta: Pregunta; etiqueta: string }
+  | { tipo: "resumen"; etiqueta: string };
 
 function contarPalabras(texto: string): number {
   const limpio = (texto || "").trim();
@@ -76,11 +133,18 @@ function VistaAlumnoContenido() {
   const [intentos, setIntentos] = useState(0);
   const [superada, setSuperada] = useState(false);
   const [cargando, setCargando] = useState(false);
-  const [corrigiendo, setCorrigiendo] = useState(false);
+  const [corrigiendoPaso, setCorrigiendoPaso] = useState(false);
+  const [enviandoGlobal, setEnviandoGlobal] = useState(false);
   const [vistaLectura, setVistaLectura] = useState<"original" | "texto">("original");
+  const [avisoPegado, setAvisoPegado] = useState<string | null>(null);
 
+  const [modoSecuencial, setModoSecuencial] = useState(true);
+  const [pasoActual, setPasoActual] = useState(0);
+
+  const bloqueoSecuencial = actividad?.bloqueo_secuencial ?? true;
   const sinIntentos = intentos >= MAX_INTENTOS && !superada;
   const bloqueado = superada || sinIntentos;
+  const ocupado = corrigiendoPaso || enviandoGlobal;
 
   const minPalabrasResumen = Number(actividad?.resumen_min_palabras) || 0;
   const requiereResumen = minPalabrasResumen > 0;
@@ -89,11 +153,114 @@ function VistaAlumnoContenido() {
     !requiereResumen || palabrasActualesResumen >= minPalabrasResumen;
   const palabrasFaltantes = Math.max(0, minPalabrasResumen - palabrasActualesResumen);
 
+  const pasosSecuenciales: PasoSecuencial[] = actividad
+    ? [
+        ...(actividad.preguntas_literales || []).map((p, i) => ({
+          tipo: "literal" as const,
+          indice: i,
+          pregunta: p,
+          etiqueta: `Literal L${i + 1}`,
+        })),
+        ...(actividad.preguntas_inferenciales || []).map((p, i) => ({
+          tipo: "inferencial" as const,
+          indice: i,
+          pregunta: p,
+          etiqueta: `Inferencial I${i + 1}`,
+        })),
+        ...(requiereResumen
+          ? [{ tipo: "resumen" as const, etiqueta: "Resumen final" }]
+          : []),
+      ]
+    : [];
+
+  const obtenerCorreccionPaso = (
+    evalData: ResultadoCorreccion | null,
+    paso?: PasoSecuencial
+  ): CorreccionItem | null => {
+    if (!paso || !evalData) return null;
+    if (paso.tipo === "literal") {
+      return evalData.correcciones_literales?.[paso.indice] || null;
+    }
+    if (paso.tipo === "inferencial") {
+      return evalData.correcciones_inferenciales?.[paso.indice] || null;
+    }
+    return evalData.correccion_resumen || null;
+  };
+
+  const estaPasoDominado = (
+    evalData: ResultadoCorreccion | null,
+    paso?: PasoSecuencial
+  ): boolean => {
+    const corr = obtenerCorreccionPaso(evalData, paso);
+    return Boolean(
+      corr &&
+        esNivelDominado(corr.nivel_comprension) &&
+        esNivelDominado(corr.nivel_expresion)
+    );
+  };
+
+  const maxPasoDesbloqueado = (() => {
+    if (!bloqueoSecuencial) {
+      return Math.max(0, pasosSecuenciales.length - 1);
+    }
+    for (let i = 0; i < pasosSecuenciales.length; i++) {
+      if (!estaPasoDominado(evaluacion, pasosSecuenciales[i])) {
+        return i;
+      }
+    }
+    return Math.max(0, pasosSecuenciales.length - 1);
+  })();
+
+  const todosLosPasosDominados =
+    pasosSecuenciales.length > 0 &&
+    pasosSecuenciales.every((p) => estaPasoDominado(evaluacion, p));
+
+  const todasLasRespuestasRellenas =
+    (actividad?.preguntas_literales || []).every((_, i) =>
+      Boolean(respLiterales[i]?.trim())
+    ) &&
+    (actividad?.preguntas_inferenciales || []).every((_, i) =>
+      Boolean(respInferenciales[i]?.trim())
+    ) &&
+    (!requiereResumen || resumenCumpleMinimo);
+
+  const listoParaEntregar = bloqueoSecuencial
+    ? todosLosPasosDominados
+    : todasLasRespuestasRellenas;
+
+  const indicePasoSeguro = Math.min(
+    pasoActual,
+    maxPasoDesbloqueado,
+    Math.max(0, pasosSecuenciales.length - 1)
+  );
+  const pasoActivo = pasosSecuenciales[indicePasoSeguro];
+  const corrPasoActivo = obtenerCorreccionPaso(evaluacion, pasoActivo);
+  const pasoActivoDominado = estaPasoDominado(evaluacion, pasoActivo);
+  const esUltimoPaso = indicePasoSeguro >= pasosSecuenciales.length - 1;
+
+  const totalLit = (actividad?.preguntas_literales || []).length;
+  const totalInf = (actividad?.preguntas_inferenciales || []).length;
+  const indiceGlobalLiteral = (idx: number) => idx;
+  const indiceGlobalInferencial = (idx: number) => totalLit + idx;
+  const indiceGlobalResumen = totalLit + totalInf;
+  const resumenDesbloqueado =
+    !bloqueoSecuencial || indiceGlobalResumen <= maxPasoDesbloqueado;
+
   const parrafosTexto = (actividad?.texto || "")
     .replace(/\\n/g, "\n")
     .split(/\r?\n+/)
     .map((p) => p.trim())
     .filter(Boolean);
+
+  const bloquearPegado = (
+    e: React.ClipboardEvent<HTMLTextAreaElement> | React.DragEvent<HTMLTextAreaElement>
+  ) => {
+    e.preventDefault();
+    setAvisoPegado(
+      "🚫 No está permitido pegar texto. Redacta la respuesta con tus propias palabras."
+    );
+    setTimeout(() => setAvisoPegado(null), 4500);
+  };
 
   const entrarActividad = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +281,10 @@ function VistaAlumnoContenido() {
         return;
       }
 
-      setActividad(act as Actividad);
+      const actTipada = act as Actividad;
+      const esBloqueoActivo = actTipada.bloqueo_secuencial ?? true;
+      setActividad(actTipada);
+      setModoSecuencial(esBloqueoActivo);
 
       const { data: entregaPrevia } = await supabase
         .from("entregas")
@@ -127,40 +297,256 @@ function VistaAlumnoContenido() {
         setRespLiterales(entregaPrevia.respuestas_literales || []);
         setRespInferenciales(entregaPrevia.respuestas_inferenciales || []);
         setRespResumen(entregaPrevia.respuesta_resumen || "");
-        setEvaluacion(entregaPrevia.ultima_evaluacion || null);
+        const evalPrevia: ResultadoCorreccion | null =
+          entregaPrevia.ultima_evaluacion || null;
+        setEvaluacion(evalPrevia);
         setIntentos(entregaPrevia.intentos || 0);
         setSuperada(Boolean(entregaPrevia.superada));
+
+        if (evalPrevia && esBloqueoActivo) {
+          const litLen = (actTipada.preguntas_literales || []).length;
+          const infLen = (actTipada.preguntas_inferenciales || []).length;
+          let primerPendiente = 0;
+          let encontrado = false;
+
+          for (let i = 0; i < litLen; i++) {
+            const c = evalPrevia.correcciones_literales?.[i];
+            if (
+              !c ||
+              !esNivelDominado(c.nivel_comprension) ||
+              !esNivelDominado(c.nivel_expresion)
+            ) {
+              primerPendiente = i;
+              encontrado = true;
+              break;
+            }
+          }
+          if (!encontrado) {
+            for (let j = 0; j < infLen; j++) {
+              const c = evalPrevia.correcciones_inferenciales?.[j];
+              if (
+                !c ||
+                !esNivelDominado(c.nivel_comprension) ||
+                !esNivelDominado(c.nivel_expresion)
+              ) {
+                primerPendiente = litLen + j;
+                encontrado = true;
+                break;
+              }
+            }
+          }
+          if (!encontrado && (Number(actTipada.resumen_min_palabras) || 0) > 0) {
+            primerPendiente = litLen + infLen;
+          }
+          setPasoActual(primerPendiente);
+        } else {
+          setPasoActual(0);
+        }
       } else {
         setRespLiterales((act.preguntas_literales || []).map(() => ""));
         setRespInferenciales((act.preguntas_inferenciales || []).map(() => ""));
         setRespResumen("");
+        setPasoActual(0);
       }
     } finally {
       setCargando(false);
     }
   };
 
-  const enviarIntento = async () => {
-    if (!actividad || bloqueado) return;
+  // 1) Comprobar un paso individual SIN gastar intentos globales
+  const comprobarPasoIndividual = async (pasoForzado?: PasoSecuencial) => {
+    if (!actividad || bloqueado || ocupado) return;
 
-    if (requiereResumen && !resumenCumpleMinimo) {
+    const pasoObjetivo =
+      pasoForzado ||
+      (modoSecuencial ? pasoActivo : pasosSecuenciales[maxPasoDesbloqueado]);
+
+    if (!pasoObjetivo) return;
+
+    if (pasoObjetivo.tipo === "literal" && !respLiterales[pasoObjetivo.indice]?.trim()) {
+      alert(
+        `Debes responder primero a la pregunta L${pasoObjetivo.indice + 1} antes de comprobarla.`
+      );
+      return;
+    }
+    if (
+      pasoObjetivo.tipo === "inferencial" &&
+      !respInferenciales[pasoObjetivo.indice]?.trim()
+    ) {
+      alert(
+        `Debes responder primero a la pregunta I${pasoObjetivo.indice + 1} antes de comprobarla.`
+      );
+      return;
+    }
+    if (pasoObjetivo.tipo === "resumen" && !resumenCumpleMinimo) {
       alert(
         `El resumen es obligatorio y debe tener al menos ${minPalabrasResumen} palabras (llevas ${palabrasActualesResumen}).`
       );
       return;
     }
 
-    const hayRespuesta =
-      respLiterales.some((r) => r.trim().length > 0) ||
-      respInferenciales.some((r) => r.trim().length > 0) ||
-      (requiereResumen && respResumen.trim().length > 0);
+    setCorrigiendoPaso(true);
 
-    if (!hayRespuesta) {
-      alert("Escribe tus respuestas antes de pedir ayuda al entrenador.");
+    try {
+      const payload = {
+        titulo: actividad.titulo,
+        texto: actividad.texto,
+        edad: actividad.edad,
+        intentoActual: 1,
+        preguntas_literales:
+          pasoObjetivo.tipo === "literal" ? [pasoObjetivo.pregunta] : [],
+        preguntas_inferenciales:
+          pasoObjetivo.tipo === "inferencial" ? [pasoObjetivo.pregunta] : [],
+        respuestasAlumnoLiterales:
+          pasoObjetivo.tipo === "literal" ? [respLiterales[pasoObjetivo.indice] || ""] : [],
+        respuestasAlumnoInferenciales:
+          pasoObjetivo.tipo === "inferencial"
+            ? [respInferenciales[pasoObjetivo.indice] || ""]
+            : [],
+        resumenMinPalabras: pasoObjetivo.tipo === "resumen" ? minPalabrasResumen : 0,
+        resumenModelo: pasoObjetivo.tipo === "resumen" ? actividad.resumen_modelo || "" : "",
+        respuestaAlumnoResumen: pasoObjetivo.tipo === "resumen" ? respResumen : undefined,
+      };
+
+      const res = await fetch("/api/corregir-lectura", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data: ResultadoCorreccion & { error?: string } = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Error al evaluar el paso");
+
+      const base: ResultadoCorreccion = evaluacion || {
+        nivel_global: "No conseguido",
+        nivel_comprension_global: "No conseguido",
+        nivel_expresion_global: "No conseguido",
+        comentario_general: data.comentario_general,
+        correcciones_literales: [],
+        correcciones_inferenciales: [],
+        correccion_resumen: null,
+      };
+
+      const nuevasLit = [...(base.correcciones_literales || [])];
+      const nuevasInf = [...(base.correcciones_inferenciales || [])];
+      let nuevoRes = base.correccion_resumen || null;
+
+      if (pasoObjetivo.tipo === "literal" && data.correcciones_literales?.[0]) {
+        nuevasLit[pasoObjetivo.indice] = data.correcciones_literales[0];
+      } else if (
+        pasoObjetivo.tipo === "inferencial" &&
+        data.correcciones_inferenciales?.[0]
+      ) {
+        nuevasInf[pasoObjetivo.indice] = data.correcciones_inferenciales[0];
+      } else if (pasoObjetivo.tipo === "resumen" && data.correccion_resumen) {
+        nuevoRes = data.correccion_resumen;
+      }
+
+      const { compGlobal, exprGlobal, mediaGlobal } = calcularNivelGlobalActividad(
+        totalLit,
+        totalInf,
+        requiereResumen,
+        nuevasLit,
+        nuevasInf,
+        nuevoRes
+      );
+
+      let pasosDominados = 0;
+      (actividad.preguntas_literales || []).forEach((_, i) => {
+        const c = nuevasLit[i];
+        if (c && esNivelDominado(c.nivel_comprension) && esNivelDominado(c.nivel_expresion)) {
+          pasosDominados++;
+        }
+      });
+      (actividad.preguntas_inferenciales || []).forEach((_, i) => {
+        const c = nuevasInf[i];
+        if (c && esNivelDominado(c.nivel_comprension) && esNivelDominado(c.nivel_expresion)) {
+          pasosDominados++;
+        }
+      });
+      if (
+        requiereResumen &&
+        nuevoRes &&
+        esNivelDominado(nuevoRes.nivel_comprension) &&
+        esNivelDominado(nuevoRes.nivel_expresion)
+      ) {
+        pasosDominados++;
+      }
+
+      const totalPasos = pasosSecuenciales.length;
+      const siguientePasoIdx = Math.min(pasosDominados, Math.max(0, totalPasos - 1));
+      const etiquetaPasoActual = !bloqueoSecuencial
+        ? "Modo avance libre"
+        : pasosDominados >= totalPasos
+        ? "Listo para entregar"
+        : pasosSecuenciales[siguientePasoIdx]?.etiqueta || "En curso";
+
+      const evaluacionActualizada: ResultadoCorreccion = {
+        ...base,
+        nivel_global: mediaGlobal,
+        nivel_comprension_global: compGlobal,
+        nivel_expresion_global: exprGlobal,
+        correcciones_literales: nuevasLit,
+        correcciones_inferenciales: nuevasInf,
+        correccion_resumen: nuevoRes,
+        progreso_pasos: {
+          dominados: pasosDominados,
+          total: totalPasos,
+          paso_actual_etiqueta: etiquetaPasoActual,
+        },
+      };
+
+      await supabase.from("entregas").upsert(
+        {
+          actividad_codigo: actividad.codigo,
+          nombre_alumno: nombreAlumno.trim(),
+          intentos,
+          nivel_logro: mediaGlobal,
+          nivel_comprension: compGlobal,
+          nivel_expresion: exprGlobal,
+          superada: false,
+          respuestas_literales: respLiterales,
+          respuestas_inferenciales: respInferenciales,
+          respuesta_resumen: requiereResumen ? respResumen : null,
+          ultima_evaluacion: evaluacionActualizada,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "actividad_codigo,nombre_alumno" }
+      );
+
+      setEvaluacion(evaluacionActualizada);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error inesperado.";
+      alert("Error: " + msg);
+    } finally {
+      setCorrigiendoPaso(false);
+    }
+  };
+
+  // 2) Entregar actividad completa al profesor (gasta 1 intento global de los 10 disponibles)
+  const entregarActividadCompleta = async () => {
+    if (!actividad || bloqueado || ocupado) return;
+
+    if (bloqueoSecuencial && !todosLosPasosDominados) {
+      alert(
+        "Debes completar y dominar todos los pasos en orden antes de realizar la entrega final."
+      );
       return;
     }
 
-    setCorrigiendo(true);
+    if (!bloqueoSecuencial && !todasLasRespuestasRellenas) {
+      alert("Responde a todas las preguntas (y al resumen si lo hay) antes de entregar.");
+      return;
+    }
+
+    if (requiereResumen && !resumenCumpleMinimo) {
+      alert(
+        `El resumen es obligatorio y debe tener al menos ${minPalabrasResumen} palabras.`
+      );
+      return;
+    }
+
+    setEnviandoGlobal(true);
     const nuevoIntento = intentos + 1;
 
     try {
@@ -183,17 +569,48 @@ function VistaAlumnoContenido() {
       });
 
       const data: ResultadoCorreccion & { error?: string } = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || "Error al evaluar");
+      if (!res.ok || data.error) throw new Error(data.error || "Error al evaluar entrega");
 
       const compGlobal = data.nivel_comprension_global || data.nivel_global;
       const exprGlobal = data.nivel_expresion_global || data.nivel_global;
       const mediaGlobal = calcularMediaNiveles(compGlobal, exprGlobal);
 
-      const compOk =
-        compGlobal === "Conseguido" || compGlobal === "Altamente Conseguido";
-      const exprOk =
-        exprGlobal === "Conseguido" || exprGlobal === "Altamente Conseguido";
-      const estaSuperada = compOk && exprOk;
+      const estaSuperada = esNivelDominado(compGlobal) && esNivelDominado(exprGlobal);
+      const totalPasos = pasosSecuenciales.length;
+
+      let dominadosFinal = 0;
+      (actividad.preguntas_literales || []).forEach((_, i) => {
+        const c = data.correcciones_literales?.[i];
+        if (c && esNivelDominado(c.nivel_comprension) && esNivelDominado(c.nivel_expresion)) {
+          dominadosFinal++;
+        }
+      });
+      (actividad.preguntas_inferenciales || []).forEach((_, i) => {
+        const c = data.correcciones_inferenciales?.[i];
+        if (c && esNivelDominado(c.nivel_comprension) && esNivelDominado(c.nivel_expresion)) {
+          dominadosFinal++;
+        }
+      });
+      if (
+        requiereResumen &&
+        data.correccion_resumen &&
+        esNivelDominado(data.correccion_resumen.nivel_comprension) &&
+        esNivelDominado(data.correccion_resumen.nivel_expresion)
+      ) {
+        dominadosFinal++;
+      }
+
+      const evaluacionFinal: ResultadoCorreccion = {
+        ...data,
+        nivel_global: mediaGlobal,
+        nivel_comprension_global: compGlobal,
+        nivel_expresion_global: exprGlobal,
+        progreso_pasos: {
+          dominados: bloqueoSecuencial ? totalPasos : dominadosFinal,
+          total: totalPasos,
+          paso_actual_etiqueta: estaSuperada ? "Completada" : "Revisión final",
+        },
+      };
 
       const { error: errorUpsert } = await supabase.from("entregas").upsert(
         {
@@ -207,34 +624,24 @@ function VistaAlumnoContenido() {
           respuestas_literales: respLiterales,
           respuestas_inferenciales: respInferenciales,
           respuesta_resumen: requiereResumen ? respResumen : null,
-          ultima_evaluacion: {
-            ...data,
-            nivel_global: mediaGlobal,
-            nivel_comprension_global: compGlobal,
-            nivel_expresion_global: exprGlobal,
-          },
+          ultima_evaluacion: evaluacionFinal,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "actividad_codigo,nombre_alumno" }
       );
 
       if (errorUpsert) {
-        console.error("Error guardando progreso en Supabase:", errorUpsert.message);
+        console.error("Error guardando entrega final en Supabase:", errorUpsert.message);
       }
 
       setIntentos(nuevoIntento);
-      setEvaluacion({
-        ...data,
-        nivel_global: mediaGlobal,
-        nivel_comprension_global: compGlobal,
-        nivel_expresion_global: exprGlobal,
-      });
+      setEvaluacion(evaluacionFinal);
       setSuperada(estaSuperada);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error inesperado.";
       alert("Error: " + msg);
     } finally {
-      setCorrigiendo(false);
+      setEnviandoGlobal(false);
     }
   };
 
@@ -263,7 +670,6 @@ function VistaAlumnoContenido() {
     return (
       <div className="space-y-2.5 pt-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {/* Apartado 1: Comprensión + Indicador debajo */}
           <div className="bg-blue-50/80 border border-blue-200 rounded-lg p-3 flex flex-col justify-between gap-2.5 text-blue-950">
             <div className="text-xs leading-relaxed">
               <strong className="block text-blue-900 mb-1">
@@ -285,7 +691,6 @@ function VistaAlumnoContenido() {
             </div>
           </div>
 
-          {/* Apartado 2: Expresión escrita + Indicador debajo */}
           <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 flex flex-col justify-between gap-2.5 text-indigo-950">
             <div className="text-xs leading-relaxed">
               <strong className="block text-indigo-900 mb-1">
@@ -308,7 +713,6 @@ function VistaAlumnoContenido() {
           </div>
         </div>
 
-        {/* Valoración media de ambos apartados */}
         <div className="bg-slate-100/90 border border-slate-300 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs font-bold text-slate-700">
             ⚖️ Valoración media de la respuesta (Comprensión + Expresión):
@@ -388,6 +792,12 @@ function VistaAlumnoContenido() {
       )
     : "";
 
+  const pasoAEnviar = modoSecuencial
+    ? pasoActivo
+    : pasosSecuenciales[maxPasoDesbloqueado];
+  const deshabilitarComprobarPaso =
+    ocupado || (pasoAEnviar?.tipo === "resumen" && !resumenCumpleMinimo);
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto space-y-4">
@@ -402,9 +812,47 @@ function VistaAlumnoContenido() {
             </div>
             <h1 className="text-lg font-extrabold text-slate-900">{actividad.titulo}</h1>
           </div>
+
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
-              Intento: {intentos} / {MAX_INTENTOS}
+            {bloqueoSecuencial ? (
+              <div className="inline-flex bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPasoActual(maxPasoDesbloqueado);
+                    setModoSecuencial(true);
+                  }}
+                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                    modoSecuencial
+                      ? "bg-indigo-700 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  🎯 Paso a paso
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModoSecuencial(false)}
+                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                    !modoSecuencial
+                      ? "bg-indigo-700 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  📋 Todas las preguntas
+                </button>
+              </div>
+            ) : (
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300">
+                🔓 Modo avance libre
+              </span>
+            )}
+
+            <span
+              title="Los intentos se contabilizan únicamente al realizar la entrega global"
+              className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-200"
+            >
+              Entregas globales: {intentos} / {MAX_INTENTOS}
             </span>
             {superada && (
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300">
@@ -413,7 +861,7 @@ function VistaAlumnoContenido() {
             )}
             {sinIntentos && (
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-rose-100 text-rose-900 border border-rose-300">
-                ⛔ Límite de 10 intentos alcanzado
+                ⛔ Límite de 10 entregas alcanzado
               </span>
             )}
           </div>
@@ -502,226 +950,523 @@ function VistaAlumnoContenido() {
           </div>
 
           <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-5 space-y-5">
-            {/* PANEL DESGLOSADO DE RESULTADOS GLOBALES */}
-            {evaluacion && (
-              <div className="border-2 border-slate-300 bg-slate-50/70 rounded-2xl p-4 space-y-3">
-                <div className="font-extrabold text-sm sm:text-base text-slate-900">
-                  Resultados Globales (intento {intentos} de {MAX_INTENTOS})
-                </div>
+            {avisoPegado && (
+              <div className="bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-xl px-4 py-2.5 text-xs font-bold shadow-xs">
+                {avisoPegado}
+              </div>
+            )}
 
+            {/* Resultado final global cuando ya se ha realizado la entrega completa */}
+            {evaluacion && (superada || (!bloqueoSecuencial && intentos > 0)) && (
+              <div
+                className={`border-2 rounded-2xl p-4 space-y-2.5 ${
+                  superada
+                    ? "border-emerald-400 bg-emerald-50/60"
+                    : "border-amber-300 bg-amber-50/50"
+                }`}
+              >
+                <div
+                  className={`font-extrabold text-sm sm:text-base ${
+                    superada ? "text-emerald-950" : "text-amber-950"
+                  }`}
+                >
+                  {superada
+                    ? `🏆 Actividad entregada y superada (Entrega ${intentos} de ${MAX_INTENTOS})`
+                    : `📊 Resultado de tu entrega global (Intento ${intentos} de ${MAX_INTENTOS})`}
+                </div>
                 <p className="text-sm leading-relaxed text-slate-700">
                   {evaluacion.comentario_general}
                 </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-white border border-blue-200 rounded-xl p-3 flex flex-col justify-between gap-2">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
-                        1. {actividad.media_url ? "Comprensión Oral" : "Comprensión Lectora"} (Fondo)
-                      </div>
-                      <p className="text-xs text-slate-600 mt-0.5">
-                        Exactitud y acierto respecto al contenido.
-                      </p>
-                    </div>
-                    <div className="pt-2 border-t border-blue-100 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-bold text-blue-900">
-                        Indicador:
-                      </span>
-                      <span
-                        className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
-                          evaluacion.nivel_comprension_global || evaluacion.nivel_global
-                        )}`}
-                      >
-                        {evaluacion.nivel_comprension_global || evaluacion.nivel_global}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-indigo-200 rounded-xl p-3 flex flex-col justify-between gap-2">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">
-                        2. Expresión Escrita / Redacción (Forma)
-                      </div>
-                      <p className="text-xs text-slate-600 mt-0.5">
-                        Ortografía, gramática, puntuación y coherencia textual.
-                      </p>
-                    </div>
-                    <div className="pt-2 border-t border-indigo-100 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-bold text-indigo-900">
-                        Indicador:
-                      </span>
-                      <span
-                        className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
-                          evaluacion.nivel_expresion_global || evaluacion.nivel_global
-                        )}`}
-                      >
-                        {evaluacion.nivel_expresion_global || evaluacion.nivel_global}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Valoración general (media de ambos) */}
-                <div className="bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 block">
-                      Valoración General (Media de Comprensión y Expresión)
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      Calculada a partir de los dos indicadores independientes
-                    </span>
-                  </div>
-                  <span
-                    className={`px-3.5 py-1 rounded-full text-xs sm:text-sm font-extrabold border ${estiloNivel(
-                      mediaGlobalActual
-                    )}`}
-                  >
-                    {mediaGlobalActual}
+                <div className="flex flex-wrap gap-2 pt-1 text-xs font-bold">
+                  <span className="px-3 py-1 rounded-full bg-white border border-blue-300 text-blue-950">
+                    1. Comprensión: {evaluacion.nivel_comprension_global}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-white border border-indigo-300 text-indigo-950">
+                    2. Expresión: {evaluacion.nivel_expresion_global}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-white border border-slate-300 text-slate-900">
+                    Media General: {mediaGlobalActual}
                   </span>
                 </div>
-
-                {!superada && !sinIntentos && (
-                  <p className="text-xs font-bold text-indigo-900 pt-0.5">
-                    💡 Para superar la actividad debes alcanzar al menos <strong>Conseguido</strong> en ambos indicadores (te quedan {MAX_INTENTOS - intentos} intentos).
-                  </p>
-                )}
-                {sinIntentos && (
-                  <p className="text-xs font-bold text-rose-900 pt-0.5">
-                    Has completado los 10 intentos disponibles. Tu docente revisará tu evolución y tus respuestas guardadas.
-                  </p>
-                )}
               </div>
             )}
 
-            {/* Preguntas literales */}
-            {(actividad.preguntas_literales || []).map((item, idx) => {
-              const corr = evaluacion?.correcciones_literales?.[idx];
-              return (
-                <div key={`L-${idx}`} className="border border-slate-200 rounded-xl p-4 space-y-2.5">
-                  <label className="block text-sm font-semibold text-slate-900">
-                    L{idx + 1}. {item.pregunta}
-                  </label>
-                  <textarea
-                    rows={2}
-                    disabled={bloqueado}
-                    placeholder="Redacta una oración completa..."
-                    value={respLiterales[idx] || ""}
-                    onChange={(e) => {
-                      const copia = [...respLiterales];
-                      copia[idx] = e.target.value;
-                      setRespLiterales(copia);
-                    }}
-                    className="w-full border border-slate-300 rounded-lg p-2.5 text-sm disabled:bg-slate-100"
-                  />
-                  {corr &&
-                    renderBloqueFeedbackEstructurado(
-                      corr,
-                      "Comprensión (fondo y contenido):",
-                      "Expresión escrita (ortografía, gramática y coherencia):"
-                    )}
+            {bloqueoSecuencial && modoSecuencial && pasoActivo ? (
+              <div className="space-y-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                    <span>
+                      🎯 Avance secuencial obligatorio · Paso {indicePasoSeguro + 1} de{" "}
+                      {pasosSecuenciales.length}
+                    </span>
+                    <span className="text-indigo-700">
+                      {Math.round(((indicePasoSeguro + 1) / pasosSecuenciales.length) * 100)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-indigo-600 h-full transition-all duration-300"
+                      style={{
+                        width: `${((indicePasoSeguro + 1) / pasosSecuenciales.length) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Comprueba cada pregunta hasta alcanzar al menos <strong>Conseguido</strong> en Comprensión y Expresión escrita. Al terminar todas, pulsa <strong>Entregar actividad completa</strong>.
+                  </p>
                 </div>
-              );
-            })}
 
-            {/* Preguntas inferenciales */}
-            {(actividad.preguntas_inferenciales || []).map((item, idx) => {
-              const corr = evaluacion?.correcciones_inferenciales?.[idx];
-              return (
-                <div key={`I-${idx}`} className="border border-slate-200 rounded-xl p-4 space-y-2.5">
-                  <label className="block text-sm font-semibold text-slate-900">
-                    I{idx + 1}. {item.pregunta}
-                  </label>
-                  <textarea
-                    rows={2}
-                    disabled={bloqueado}
-                    placeholder="Redacta tu respuesta razonada..."
-                    value={respInferenciales[idx] || ""}
-                    onChange={(e) => {
-                      const copia = [...respInferenciales];
-                      copia[idx] = e.target.value;
-                      setRespInferenciales(copia);
-                    }}
-                    className="w-full border border-slate-300 rounded-lg p-2.5 text-sm disabled:bg-slate-100"
-                  />
-                  {corr &&
-                    renderBloqueFeedbackEstructurado(
-                      corr,
-                      "Comprensión (fondo y deducción):",
-                      "Expresión escrita (ortografía, gramática y coherencia):"
+                {pasoActivo.tipo === "literal" && (
+                  <div className="border-2 border-blue-200 rounded-2xl p-4 space-y-3 bg-blue-50/20">
+                    <span className="text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 inline-block px-3 py-1 rounded-lg">
+                      Comprensión Literal · Pregunta {pasoActivo.indice + 1} de {totalLit}
+                    </span>
+                    <label className="block text-base font-bold text-slate-900">
+                      L{pasoActivo.indice + 1}. {pasoActivo.pregunta.pregunta}
+                    </label>
+                    <textarea
+                      rows={3}
+                      disabled={bloqueado}
+                      onPaste={bloquearPegado}
+                      onDrop={bloquearPegado}
+                      placeholder="Redacta una oración completa con tus propias palabras (pegar deshabilitado)..."
+                      value={respLiterales[pasoActivo.indice] || ""}
+                      onChange={(e) => {
+                        const copia = [...respLiterales];
+                        copia[pasoActivo.indice] = e.target.value;
+                        setRespLiterales(copia);
+                      }}
+                      className="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm disabled:bg-slate-100"
+                    />
+                    {corrPasoActivo &&
+                      renderBloqueFeedbackEstructurado(
+                        corrPasoActivo,
+                        "Comprensión (fondo y contenido):",
+                        "Expresión escrita (ortografía, gramática y coherencia):"
+                      )}
+                  </div>
+                )}
+
+                {pasoActivo.tipo === "inferencial" && (
+                  <div className="border-2 border-indigo-200 rounded-2xl p-4 space-y-3 bg-indigo-50/20">
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-800 bg-indigo-100 inline-block px-3 py-1 rounded-lg">
+                      Comprensión Inferencial · Pregunta {pasoActivo.indice + 1} de {totalInf}
+                    </span>
+                    <label className="block text-base font-bold text-slate-900">
+                      I{pasoActivo.indice + 1}. {pasoActivo.pregunta.pregunta}
+                    </label>
+                    <textarea
+                      rows={3}
+                      disabled={bloqueado}
+                      onPaste={bloquearPegado}
+                      onDrop={bloquearPegado}
+                      placeholder="Redacta tu respuesta razonada con tus propias palabras (pegar deshabilitado)..."
+                      value={respInferenciales[pasoActivo.indice] || ""}
+                      onChange={(e) => {
+                        const copia = [...respInferenciales];
+                        copia[pasoActivo.indice] = e.target.value;
+                        setRespInferenciales(copia);
+                      }}
+                      className="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm disabled:bg-slate-100"
+                    />
+                    {corrPasoActivo &&
+                      renderBloqueFeedbackEstructurado(
+                        corrPasoActivo,
+                        "Comprensión (fondo y deducción):",
+                        "Expresión escrita (ortografía, gramática y coherencia):"
+                      )}
+                  </div>
+                )}
+
+                {pasoActivo.tipo === "resumen" && (
+                  <div className="border-2 border-amber-200 rounded-2xl p-4 space-y-3 bg-amber-50/30">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100 inline-block px-3 py-1 rounded-lg">
+                        Actividad Final · Redacción de Resumen
+                      </span>
+                      <span
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                          resumenCumpleMinimo
+                            ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                            : "bg-amber-100 text-amber-950 border-amber-300"
+                        }`}
+                      >
+                        {palabrasActualesResumen} / {minPalabrasResumen} palabras{" "}
+                        {resumenCumpleMinimo ? "✓" : `(faltan ${palabrasFaltantes})`}
+                      </span>
+                    </div>
+                    <label className="block text-base font-bold text-slate-900">
+                      Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
+                      {minPalabrasResumen} palabras):
+                    </label>
+                    <textarea
+                      rows={5}
+                      disabled={bloqueado}
+                      onPaste={bloquearPegado}
+                      onDrop={bloquearPegado}
+                      placeholder={`Escribe aquí tu resumen con tus propias palabras (mínimo ${minPalabrasResumen} palabras, pegar deshabilitado)...`}
+                      value={respResumen}
+                      onChange={(e) => setRespResumen(e.target.value)}
+                      className="w-full bg-white border border-amber-300 rounded-xl p-3 text-sm leading-relaxed disabled:bg-slate-100"
+                    />
+                    {!bloqueado && !resumenCumpleMinimo && (
+                      <p className="text-xs font-semibold text-amber-900">
+                        ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
+                        {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar la comprobación.
+                      </p>
                     )}
-                </div>
-              );
-            })}
+                    {corrPasoActivo &&
+                      renderBloqueFeedbackEstructurado(
+                        corrPasoActivo,
+                        "Comprensión (síntesis de ideas principales):",
+                        "Expresión escrita (ortografía, puntuación y cohesión):"
+                      )}
+                  </div>
+                )}
 
-            {/* Actividad final: Redacción de resumen obligatoria */}
-            {requiereResumen && (
-              <div className="border-2 border-amber-200 bg-amber-50/30 rounded-xl p-4 space-y-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg">
-                    Actividad Final · Redacción de Resumen (Obligatorio)
-                  </span>
-                  <span
-                    className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                      resumenCumpleMinimo
-                        ? "bg-emerald-100 text-emerald-900 border-emerald-300"
-                        : "bg-amber-100 text-amber-950 border-amber-300"
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <button
+                    type="button"
+                    disabled={indicePasoSeguro === 0}
+                    onClick={() => setPasoActual((p) => Math.max(0, p - 1))}
+                    className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-slate-700 cursor-pointer"
+                  >
+                    ⬅️ Pregunta anterior
+                  </button>
+
+                  {pasoActivoDominado ? (
+                    esUltimoPaso ? (
+                      <div className="px-4 py-2 rounded-xl bg-emerald-100 border border-emerald-400 text-emerald-950 text-xs font-extrabold">
+                        ✅ Todos los pasos dominados · Pulsa abajo para entregar
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPasoActual((p) => Math.min(maxPasoDesbloqueado, p + 1))
+                        }
+                        className="px-5 py-2.5 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-extrabold shadow-sm transition cursor-pointer"
+                      >
+                        ✅ Dominado · Siguiente pregunta ➡️
+                      </button>
+                    )
+                  ) : (
+                    <span className="text-xs font-semibold text-slate-500">
+                      🔒 Alcanza <strong>Conseguido</strong> en Comprensión y Expresión para avanzar
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                {bloqueoSecuencial ? (
+                  <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl px-4 py-2.5 text-xs text-indigo-950 flex items-center justify-between gap-2">
+                    <span>
+                      🔒 <strong>Progreso secuencial activo:</strong> responde y domina cada pregunta en orden para desbloquear la siguiente.
+                    </span>
+                    <span className="font-bold whitespace-nowrap">
+                      Paso {maxPasoDesbloqueado + 1} / {pasosSecuenciales.length}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800">
+                    🔓 <strong>Avance libre:</strong> puedes responder en el orden que prefieras, pedir revisión individual de cada pregunta sin gastar intentos y entregar al terminar.
+                  </div>
+                )}
+
+                {(actividad.preguntas_literales || []).map((item, idx) => {
+                  const corr = evaluacion?.correcciones_literales?.[idx];
+                  const idxGlobal = indiceGlobalLiteral(idx);
+                  const desbloqueada = !bloqueoSecuencial || idxGlobal <= maxPasoDesbloqueado;
+                  const dominada = estaPasoDominado(
+                    evaluacion,
+                    pasosSecuenciales[idxGlobal]
+                  );
+
+                  return (
+                    <div
+                      key={`L-${idx}`}
+                      className={`border rounded-xl p-4 space-y-2.5 transition ${
+                        desbloqueada
+                          ? "border-slate-200 bg-white"
+                          : "border-slate-200 bg-slate-100/80 opacity-70"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block text-sm font-semibold text-slate-900">
+                          L{idx + 1}. {item.pregunta}
+                        </label>
+                        {dominada ? (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 shrink-0">
+                            ✅ Dominada
+                          </span>
+                        ) : !desbloqueada ? (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 shrink-0">
+                            🔒 Bloqueada
+                          </span>
+                        ) : !bloqueoSecuencial && !bloqueado ? (
+                          <button
+                            type="button"
+                            disabled={ocupado || !respLiterales[idx]?.trim()}
+                            onClick={() =>
+                              comprobarPasoIndividual(pasosSecuenciales[idxGlobal])
+                            }
+                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 disabled:opacity-40 cursor-pointer shrink-0"
+                          >
+                            🔍 Comprobar L{idx + 1}
+                          </button>
+                        ) : (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 shrink-0">
+                            ✍️ Activa
+                          </span>
+                        )}
+                      </div>
+
+                      <textarea
+                        rows={2}
+                        disabled={bloqueado || !desbloqueada}
+                        onPaste={bloquearPegado}
+                        onDrop={bloquearPegado}
+                        placeholder={
+                          desbloqueada
+                            ? "Redacta una oración completa (pegar deshabilitado)..."
+                            : "🔒 Supera la pregunta anterior en Comprensión y Expresión para desbloquear esta casilla."
+                        }
+                        value={respLiterales[idx] || ""}
+                        onChange={(e) => {
+                          const copia = [...respLiterales];
+                          copia[idx] = e.target.value;
+                          setRespLiterales(copia);
+                        }}
+                        className="w-full border border-slate-300 rounded-lg p-2.5 text-sm disabled:bg-slate-200/70 disabled:cursor-not-allowed"
+                      />
+                      {corr &&
+                        renderBloqueFeedbackEstructurado(
+                          corr,
+                          "Comprensión (fondo y contenido):",
+                          "Expresión escrita (ortografía, gramática y coherencia):"
+                        )}
+                    </div>
+                  );
+                })}
+
+                {(actividad.preguntas_inferenciales || []).map((item, idx) => {
+                  const corr = evaluacion?.correcciones_inferenciales?.[idx];
+                  const idxGlobal = indiceGlobalInferencial(idx);
+                  const desbloqueada = !bloqueoSecuencial || idxGlobal <= maxPasoDesbloqueado;
+                  const dominada = estaPasoDominado(
+                    evaluacion,
+                    pasosSecuenciales[idxGlobal]
+                  );
+
+                  return (
+                    <div
+                      key={`I-${idx}`}
+                      className={`border rounded-xl p-4 space-y-2.5 transition ${
+                        desbloqueada
+                          ? "border-slate-200 bg-white"
+                          : "border-slate-200 bg-slate-100/80 opacity-70"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block text-sm font-semibold text-slate-900">
+                          I{idx + 1}. {item.pregunta}
+                        </label>
+                        {dominada ? (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 shrink-0">
+                            ✅ Dominada
+                          </span>
+                        ) : !desbloqueada ? (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 shrink-0">
+                            🔒 Bloqueada
+                          </span>
+                        ) : !bloqueoSecuencial && !bloqueado ? (
+                          <button
+                            type="button"
+                            disabled={ocupado || !respInferenciales[idx]?.trim()}
+                            onClick={() =>
+                              comprobarPasoIndividual(pasosSecuenciales[idxGlobal])
+                            }
+                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 disabled:opacity-40 cursor-pointer shrink-0"
+                          >
+                            🔍 Comprobar I{idx + 1}
+                          </button>
+                        ) : (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 shrink-0">
+                            ✍️ Activa
+                          </span>
+                        )}
+                      </div>
+
+                      <textarea
+                        rows={2}
+                        disabled={bloqueado || !desbloqueada}
+                        onPaste={bloquearPegado}
+                        onDrop={bloquearPegado}
+                        placeholder={
+                          desbloqueada
+                            ? "Redacta tu respuesta razonada (pegar deshabilitado)..."
+                            : "🔒 Supera la pregunta anterior en Comprensión y Expresión para desbloquear esta casilla."
+                        }
+                        value={respInferenciales[idx] || ""}
+                        onChange={(e) => {
+                          const copia = [...respInferenciales];
+                          copia[idx] = e.target.value;
+                          setRespInferenciales(copia);
+                        }}
+                        className="w-full border border-slate-300 rounded-lg p-2.5 text-sm disabled:bg-slate-200/70 disabled:cursor-not-allowed"
+                      />
+                      {corr &&
+                        renderBloqueFeedbackEstructurado(
+                          corr,
+                          "Comprensión (fondo y deducción):",
+                          "Expresión escrita (ortografía, gramática y coherencia):"
+                        )}
+                    </div>
+                  );
+                })}
+
+                {requiereResumen && (
+                  <div
+                    className={`border-2 rounded-xl p-4 space-y-2.5 transition ${
+                      resumenDesbloqueado
+                        ? "border-amber-200 bg-amber-50/30"
+                        : "border-slate-200 bg-slate-100/80 opacity-70"
                     }`}
                   >
-                    {palabrasActualesResumen} / {minPalabrasResumen} palabras{" "}
-                    {resumenCumpleMinimo ? "✓" : `(faltan ${palabrasFaltantes})`}
-                  </span>
-                </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg">
+                        Actividad Final · Redacción de Resumen (Obligatorio)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                            !resumenDesbloqueado
+                              ? "bg-slate-200 text-slate-700 border-slate-300"
+                              : resumenCumpleMinimo
+                              ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                              : "bg-amber-100 text-amber-950 border-amber-300"
+                          }`}
+                        >
+                          {!resumenDesbloqueado
+                            ? "🔒 Bloqueado hasta superar las preguntas"
+                            : `${palabrasActualesResumen} / ${minPalabrasResumen} palabras ${
+                                resumenCumpleMinimo ? "✓" : `(faltan ${palabrasFaltantes})`
+                              }`}
+                        </span>
+                        {!bloqueoSecuencial && !bloqueado && (
+                          <button
+                            type="button"
+                            disabled={ocupado || !resumenCumpleMinimo}
+                            onClick={() =>
+                              comprobarPasoIndividual(pasosSecuenciales[indiceGlobalResumen])
+                            }
+                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 disabled:opacity-40 cursor-pointer shrink-0"
+                          >
+                            🔍 Comprobar resumen
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
-                <label className="block text-sm font-semibold text-slate-900">
-                  Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
-                  {minPalabrasResumen} palabras):
-                </label>
+                    <label className="block text-sm font-semibold text-slate-900">
+                      Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
+                      {minPalabrasResumen} palabras):
+                    </label>
 
-                <textarea
-                  rows={5}
-                  disabled={bloqueado}
-                  placeholder={`Escribe aquí tu resumen (debes escribir al menos ${minPalabrasResumen} palabras para poder enviarlo)...`}
-                  value={respResumen}
-                  onChange={(e) => setRespResumen(e.target.value)}
-                  className="w-full bg-white border border-amber-300 rounded-lg p-3 text-sm leading-relaxed disabled:bg-slate-100"
-                />
+                    <textarea
+                      rows={5}
+                      disabled={bloqueado || !resumenDesbloqueado}
+                      onPaste={bloquearPegado}
+                      onDrop={bloquearPegado}
+                      placeholder={
+                        resumenDesbloqueado
+                          ? `Escribe aquí tu resumen con tus propias palabras (mínimo ${minPalabrasResumen} palabras, pegar deshabilitado)...`
+                          : "🔒 Supera todas las preguntas anteriores para desbloquear el resumen final."
+                      }
+                      value={respResumen}
+                      onChange={(e) => setRespResumen(e.target.value)}
+                      className="w-full bg-white border border-amber-300 rounded-lg p-3 text-sm leading-relaxed disabled:bg-slate-200/70 disabled:border-slate-300 disabled:cursor-not-allowed"
+                    />
 
-                {!bloqueado && !resumenCumpleMinimo && (
-                  <p className="text-xs font-semibold text-amber-900">
-                    ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
-                    {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar el envío.
-                  </p>
+                    {!bloqueado && resumenDesbloqueado && !resumenCumpleMinimo && (
+                      <p className="text-xs font-semibold text-amber-900">
+                        ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
+                        {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar la comprobación.
+                      </p>
+                    )}
+
+                    {evaluacion?.correccion_resumen &&
+                      renderBloqueFeedbackEstructurado(
+                        evaluacion.correccion_resumen,
+                        "Comprensión (síntesis de ideas principales):",
+                        "Expresión escrita (ortografía, puntuación y cohesión):"
+                      )}
+                  </div>
                 )}
-
-                {evaluacion?.correccion_resumen &&
-                  renderBloqueFeedbackEstructurado(
-                    evaluacion.correccion_resumen,
-                    "Comprensión (síntesis de ideas principales):",
-                    "Expresión escrita (ortografía, puntuación y cohesión):"
-                  )}
-              </div>
+              </>
             )}
 
+            {/* Botonera inferior */}
             {!bloqueado && (
-              <button
-                type="button"
-                disabled={corrigiendo || !resumenCumpleMinimo}
-                title={
-                  !resumenCumpleMinimo
-                    ? `Completa el resumen (faltan ${palabrasFaltantes} palabras)`
-                    : undefined
-                }
-                onClick={enviarIntento}
-                className="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold text-sm transition cursor-pointer"
-              >
-                {corrigiendo
-                  ? "Analizando comprensión y redacción..."
-                  : !resumenCumpleMinimo
-                  ? `🔒 Completa el resumen (faltan ${palabrasFaltantes} palabras)`
-                  : intentos > 0
-                  ? `🔄 Revisar mejora (Intento ${intentos + 1} de ${MAX_INTENTOS})`
-                  : `🧭 Enviar al entrenador (Intento 1 de ${MAX_INTENTOS})`}
-              </button>
+              <div className="space-y-2.5 pt-1">
+                {bloqueoSecuencial ? (
+                  !todosLosPasosDominados ? (
+                    <button
+                      type="button"
+                      disabled={deshabilitarComprobarPaso}
+                      onClick={() => comprobarPasoIndividual()}
+                      className="w-full py-3 rounded-xl bg-indigo-700 hover:bg-indigo-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold text-sm transition cursor-pointer"
+                    >
+                      {corrigiendoPaso
+                        ? "Analizando esta respuesta..."
+                        : pasoAEnviar?.tipo === "resumen" && !resumenCumpleMinimo
+                        ? `🔒 Completa el resumen (faltan ${palabrasFaltantes} palabras)`
+                        : `🔍 Comprobar paso ${
+                            (modoSecuencial ? indicePasoSeguro : maxPasoDesbloqueado) + 1
+                          } de ${pasosSecuenciales.length} (no gasta intentos)`}
+                    </button>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-2.5">
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => comprobarPasoIndividual()}
+                        className="sm:w-1/3 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 font-bold text-xs transition cursor-pointer"
+                      >
+                        {corrigiendoPaso ? "Revisando..." : "🔍 Revisar último paso"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={entregarActividadCompleta}
+                        className="sm:w-2/3 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 text-white font-extrabold text-sm shadow-sm transition cursor-pointer"
+                      >
+                        {enviandoGlobal
+                          ? "Enviando entrega global al profesor..."
+                          : `📤 Entregar actividad completa al profesor (Intento ${
+                              intentos + 1
+                            } de ${MAX_INTENTOS})`}
+                      </button>
+                    </div>
+                  )
+                ) : (
+                  <button
+                    type="button"
+                    disabled={ocupado || !listoParaEntregar}
+                    onClick={entregarActividadCompleta}
+                    className="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-extrabold text-sm shadow-sm transition cursor-pointer"
+                  >
+                    {enviandoGlobal
+                      ? "Enviando entrega global al profesor..."
+                      : !listoParaEntregar
+                      ? "✍️ Responde a todas las preguntas para habilitar la entrega"
+                      : `📤 Entregar actividad completa al profesor (Intento ${
+                          intentos + 1
+                        } de ${MAX_INTENTOS})`}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

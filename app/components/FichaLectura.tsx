@@ -64,6 +64,7 @@ export default function FichaLectura({
   const [historialCambios, setHistorialCambios] = useState<string[]>([]);
 
   const tieneResumen = (resultado.resumen_min_palabras || 0) > 0;
+  const bloqueoSecuencial = resultado.bloqueo_secuencial ?? true;
 
   const parrafosTexto = (resultado.texto || "")
     .replace(/\\n/g, "\n")
@@ -199,7 +200,10 @@ export default function FichaLectura({
 
     setPublicando(true);
     try {
-      const codigoGenerado = `MESTA-${Math.floor(100 + Math.random() * 900)}`;
+      const arrayAleatorio = new Uint32Array(1);
+      window.crypto.getRandomValues(arrayAleatorio);
+      const codigoGenerado = `MESTA-${100 + (arrayAleatorio[0] % 900)}`;
+
       const { error } = await supabase.from("actividades").insert({
         codigo: codigoGenerado,
         titulo: resultado.titulo,
@@ -213,6 +217,7 @@ export default function FichaLectura({
         resumen_modelo: editandoResumen
           ? borradorResumenModelo
           : resultado.resumen_modelo || null,
+        bloqueo_secuencial: bloqueoSecuencial,
       });
 
       if (error) {
@@ -417,18 +422,40 @@ export default function FichaLectura({
 
       {/* Barra de herramientas superior */}
       <div className="flex flex-wrap justify-between items-center gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 print:hidden">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <span
-            className={`w-2.5 h-2.5 rounded-full ${
-              mostrarRespuestas ? "bg-emerald-500" : "bg-blue-500"
-            }`}
-          />
-          <span>
-            Vista:{" "}
-            <strong className="text-slate-900">
-              {mostrarRespuestas ? "Ficha Profesor (con soluciones)" : "Ficha Alumnado"}
-            </strong>
-          </span>
+        <div className="flex flex-wrap items-center gap-2.5 text-sm text-slate-600">
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                mostrarRespuestas ? "bg-emerald-500" : "bg-blue-500"
+              }`}
+            />
+            <span>
+              Vista:{" "}
+              <strong className="text-slate-900">
+                {mostrarRespuestas ? "Ficha Profesor (con soluciones)" : "Ficha Alumnado"}
+              </strong>
+            </span>
+          </div>
+
+          {!codigoAula && (
+            <button
+              type="button"
+              onClick={() =>
+                onActualizarResultado({
+                  ...resultado,
+                  bloqueo_secuencial: !bloqueoSecuencial,
+                })
+              }
+              title="Pulsa para alternar si el alumnado debe avanzar en orden obligatorio o libre"
+              className={`text-xs font-bold px-3 py-1 rounded-full border transition cursor-pointer ${
+                bloqueoSecuencial
+                  ? "bg-indigo-100 text-indigo-950 border-indigo-300 hover:bg-indigo-200/70"
+                  : "bg-slate-200/80 text-slate-800 border-slate-300 hover:bg-slate-300/70"
+              }`}
+            >
+              {bloqueoSecuencial ? "🔒 Avance secuencial obligatorio" : "🔓 Avance libre"}
+            </button>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -568,6 +595,7 @@ export default function FichaLectura({
         <PanelSeguimientoClase
           codigoActividad={codigoAula}
           tituloActividad={resultado.titulo}
+          bloqueoSecuencial={bloqueoSecuencial}
         />
       )}
 

@@ -24,13 +24,16 @@ export default function GeneradorLectura() {
     numInferenciales: 2,
     incluirResumen: false,
     minPalabrasResumen: 60,
+    bloqueo_secuencial: true,
   });
 
   useEffect(() => {
-    setForm((prev) => ({
-      ...prev,
-      tematica: obtenerTemaAleatorio(),
-    }));
+    queueMicrotask(() => {
+      setForm((prev) => ({
+        ...prev,
+        tematica: obtenerTemaAleatorio(),
+      }));
+    });
   }, []);
 
   const [resultado, setResultado] = useState<ResultadoLectura | null>(null);
@@ -126,6 +129,7 @@ export default function GeneradorLectura() {
 
       const resultadoFinal: ResultadoLectura = {
         ...data,
+        bloqueo_secuencial: form.bloqueo_secuencial ?? true,
         ...(esContenidoPropio
           ? {
               titulo: form.tituloPropio?.trim() || data.titulo,
@@ -184,6 +188,7 @@ export default function GeneradorLectura() {
       debeHacerScrollRef.current = true;
       setResultado({
         ...data,
+        bloqueo_secuencial: resultado.bloqueo_secuencial ?? true,
         ...(resultado.mediaUrl
           ? { mediaUrl: resultado.mediaUrl, mediaTipo: resultado.mediaTipo }
           : {}),
@@ -248,7 +253,9 @@ export default function GeneradorLectura() {
             />
 
             <VentanaCorrector
-              key={`corrector-${resultado.titulo}-${resultado.resumen_min_palabras || 0}`}
+              key={`corrector-${resultado.titulo}-${resultado.resumen_min_palabras || 0}-${
+                resultado.bloqueo_secuencial ?? true
+              }`}
               abierta={ventanaCorrectorAbierta}
               onCerrar={() => setVentanaCorrectorAbierta(false)}
               titulo={resultado.titulo}
@@ -261,6 +268,7 @@ export default function GeneradorLectura() {
               preguntasInferenciales={resultado.preguntas_inferenciales || []}
               resumenMinPalabras={resultado.resumen_min_palabras || 0}
               resumenModelo={resultado.resumen_modelo || ""}
+              bloqueoSecuencial={resultado.bloqueo_secuencial ?? true}
             />
           </>
         )}

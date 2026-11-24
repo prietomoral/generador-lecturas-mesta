@@ -87,6 +87,7 @@ export default function FormularioLectura({
   const [pestanaOral, setPestanaOral] = useState<"reproductor" | "transcripcion">("reproductor");
 
   const modo = form.modoOrigen || "generar";
+  const bloqueoActivo = form.bloqueo_secuencial ?? true;
 
   useEffect(() => {
     return () => {
@@ -775,13 +776,13 @@ export default function FormularioLectura({
 
       <hr className="border-slate-100" />
 
-      {/* Bloque 3: Preguntas de Comprensión + Actividad final de resumen */}
+      {/* Bloque 3: Preguntas de Comprensión + Actividad final de resumen + Bloqueo secuencial */}
       <div>
         <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
           <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">
             3
           </span>
-          Batería de preguntas y actividades
+          Batería de preguntas, resumen y modalidad de avance
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -887,6 +888,44 @@ export default function FormularioLectura({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Opción de configuración docente: Bloqueo secuencial obligatorio */}
+        <div className="mt-3 bg-indigo-50/50 border border-indigo-200/90 rounded-xl p-4">
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={bloqueoActivo}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    bloqueo_secuencial: e.target.checked,
+                  })
+                }
+                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+              <div>
+                <div className="text-sm font-semibold text-slate-800">
+                  🔒 Bloqueo secuencial obligatorio en el entrenador del alumnado
+                </div>
+                <div className="text-xs text-slate-500">
+                  {bloqueoActivo
+                    ? "Activado: el alumnado debe dominar cada pregunta (Comprensión y Expresión) antes de desbloquear la siguiente."
+                    : "Desactivado: el alumnado puede responder libremente a todas las preguntas en el orden que prefiera."}
+                </div>
+              </div>
+            </div>
+            <span
+              className={`text-xs font-extrabold px-3 py-1 rounded-full border shrink-0 ${
+                bloqueoActivo
+                  ? "bg-indigo-100 text-indigo-900 border-indigo-300"
+                  : "bg-slate-100 text-slate-700 border-slate-300"
+              }`}
+            >
+              {bloqueoActivo ? "🔒 Obligatorio" : "🔓 Libre"}
+            </span>
+          </label>
         </div>
       </div>
 

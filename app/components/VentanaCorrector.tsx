@@ -35,7 +35,13 @@ interface VentanaCorrectorProps {
   preguntasInferenciales: Pregunta[];
   resumenMinPalabras?: number;
   resumenModelo?: string;
+  bloqueoSecuencial?: boolean;
 }
+
+type PasoSecuencial =
+  | { tipo: "literal"; indice: number; pregunta: Pregunta; etiqueta: string }
+  | { tipo: "inferencial"; indice: number; pregunta: Pregunta; etiqueta: string }
+  | { tipo: "resumen"; etiqueta: string };
 
 const NIVELES_ESCALA = [
   "No conseguido",
@@ -43,6 +49,10 @@ const NIVELES_ESCALA = [
   "Conseguido",
   "Altamente Conseguido",
 ];
+
+function esNivelDominado(nivel?: string): boolean {
+  return nivel === "Conseguido" || nivel === "Altamente Conseguido";
+}
 
 function calcularMediaNiveles(nivelComp: string, nivelExpr: string): string {
   const idxComp = Math.max(0, NIVELES_ESCALA.indexOf(nivelComp));
@@ -70,6 +80,7 @@ export default function VentanaCorrector({
   preguntasInferenciales,
   resumenMinPalabras = 0,
   resumenModelo = "",
+  bloqueoSecuencial = true,
 }: VentanaCorrectorProps) {
   const [respLiterales, setRespLiterales] = useState<string[]>(() =>
     preguntasLiterales.map(() => "")
@@ -81,6 +92,11 @@ export default function VentanaCorrector({
   const [corrigiendo, setCorrigiendo] = useState(false);
   const [evaluacion, setEvaluacion] = useState<ResultadoCorreccion | null>(null);
   const [vistaLectura, setVistaLectura] = useState<"original" | "texto">("original");
+  const [avisoPegado, setAvisoPegado] = useState<string | null>(null);
+
+  // Cuando bloqueoSecuencial es true, se fuerza el modo paso a paso bloqueado; si es false, empieza en vista libre
+  const [modoSecuencial, setModoSecuencial] = useState(bloqueoSecuencial);
+  const [pasoActual, setPasoActual] = useState(0);
 
   if (!abierta) return null;
 
@@ -90,54 +106,146 @@ export default function VentanaCorrector({
     !requiereResumen || palabrasActualesResumen >= resumenMinPalabras;
   const palabrasFaltantes = Math.max(0, resumenMinPalabras - palabrasActualesResumen);
 
+  const pasosSecuenciales: PasoSecuencial[] = [
+    ...preguntasLiterales.map((p, i) => ({
+      tipo: "literal" as const,
+      indice: i,
+      pregunta: p,
+      etiqueta: `Comprensión Literal · Pregunta ${i + 1} de ${preguntasLiterales.length}`,
+    })),
+    ...preguntasInferenciales.map((p, i) => ({
+      tipo: "inferencial" as const,
+      indice: i,
+      pregunta: p,
+      etiqueta: `Comprensión Inferencial · Pregunta ${i + 1} de ${preguntasInferenciales.length}`,
+    })),
+    ...(requiereResumen
+      ? [{ tipo: "resumen" as const, etiqueta: "Actividad Final · Redacción de Resumen" }]
+      : []),
+  ];
+
+  const indicePasoSeguro = Math.min(pasoActual, Math.max(0, pasosSecuenciales.length - 1));
+  const pasoActivo = pasosSecuenciales[indicePasoSeguro];
+
   const parrafosTexto = (texto || "")
     .replace(/\\n/g, "\n")
     .split(/\r?\n+/)
     .map((p) => p.trim())
     .filter(Boolean);
 
-  const manejarCorreccion = async () => {
-    if (requiereResumen && !resumenCumpleMinimo) {
-      alert(
-        `El resumen es obligatorio y debe tener al menos ${resumenMinPalabras} palabras (llevas ${palabrasActualesResumen}).`
-      );
-      return;
+  const bloquearPegado = (
+    e: React.ClipboardEvent<HTMLTextAreaElement> | React.DragEvent<HTMLTextAreaElement>
+  ) => {
+    e.preventDefault();
+    setAvisoPegado(
+      "🚫 No está permitido pegar texto. Redacta la respuesta con tus propias palabras."
+    );
+    setTimeout(() => setAvisoPegado(null), 4500);
+  };
+
+  const obtenerCorreccionPaso = (paso?: PasoSecuencial): CorreccionItem | null => {
+    if (!paso || !evaluacion) return null;
+    if (paso.tipo === "literal") {
+      return evaluacion.correcciones_literales?.[paso.indice] || null;
     }
+    if (paso.tipo === "inferencial") {
+      return evaluacion.correcciones_inferenciales?.[paso.indice] || null;
+    }
+    return evaluacion.correccion_resumen || null;
+  };
 
-    const hayAlgunaRespuesta =
-      respLiterales.some((r) => r.trim().length > 0) ||
-      respInferenciales.some((r) => r.trim().length > 0) ||
-      (requiereResumen && respResumen.trim().length > 0);
+  const corrPasoActivo = obtenerCorreccionPaso(pasoActivo);
+  const pasoActivoDominado = Boolean(
+    corrPasoActivo &&
+      esNivelDominado(corrPasoActivo.nivel_comprension) &&
+      esNivelDominado(corrPasoActivo.nivel_expresion)
+  );
+  const esUltimoPaso = indicePasoSeguro >= pasosSecuenciales.length - 1;
 
-    if (!hayAlgunaRespuesta) {
-      alert("Escribe al menos una respuesta antes de pedir ayuda al entrenador.");
-      return;
+  const manejarCorreccion = async () => {
+    if (modoSecuencial && pasoActivo) {
+      if (pasoActivo.tipo === "literal" && !respLiterales[pasoActivo.indice]?.trim()) {
+        alert("Escribe tu respuesta antes de comprobarla con el entrenador.");
+        return;
+      }
+      if (pasoActivo.tipo === "inferencial" && !respInferenciales[pasoActivo.indice]?.trim()) {
+        alert("Escribe tu respuesta razonada antes de comprobarla con el entrenador.");
+        return;
+      }
+      if (pasoActivo.tipo === "resumen" && !resumenCumpleMinimo) {
+        alert(
+          `El resumen es obligatorio y debe tener al menos ${resumenMinPalabras} palabras (llevas ${palabrasActualesResumen}).`
+        );
+        return;
+      }
+    } else {
+      if (requiereResumen && !resumenCumpleMinimo) {
+        alert(
+          `El resumen es obligatorio y debe tener al menos ${resumenMinPalabras} palabras (llevas ${palabrasActualesResumen}).`
+        );
+        return;
+      }
+
+      const hayAlgunaRespuesta =
+        respLiterales.some((r) => r.trim().length > 0) ||
+        respInferenciales.some((r) => r.trim().length > 0) ||
+        (requiereResumen && respResumen.trim().length > 0);
+
+      if (!hayAlgunaRespuesta) {
+        alert("Escribe al menos una respuesta antes de pedir ayuda al entrenador.");
+        return;
+      }
     }
 
     setCorrigiendo(true);
-    setEvaluacion(null);
+    if (!modoSecuencial) {
+      setEvaluacion(null);
+    }
 
     try {
+      const payload =
+        modoSecuencial && pasoActivo
+          ? {
+              titulo,
+              texto,
+              edad,
+              intentoActual: 1,
+              preguntas_literales:
+                pasoActivo.tipo === "literal" ? [pasoActivo.pregunta] : [],
+              preguntas_inferenciales:
+                pasoActivo.tipo === "inferencial" ? [pasoActivo.pregunta] : [],
+              respuestasAlumnoLiterales:
+                pasoActivo.tipo === "literal" ? [respLiterales[pasoActivo.indice] || ""] : [],
+              respuestasAlumnoInferenciales:
+                pasoActivo.tipo === "inferencial"
+                  ? [respInferenciales[pasoActivo.indice] || ""]
+                  : [],
+              resumenMinPalabras: pasoActivo.tipo === "resumen" ? resumenMinPalabras : 0,
+              resumenModelo: pasoActivo.tipo === "resumen" ? resumenModelo : "",
+              respuestaAlumnoResumen: pasoActivo.tipo === "resumen" ? respResumen : undefined,
+            }
+          : {
+              titulo,
+              texto,
+              edad,
+              intentoActual: 1,
+              preguntas_literales: preguntasLiterales,
+              preguntas_inferenciales: preguntasInferenciales,
+              respuestasAlumnoLiterales: respLiterales,
+              respuestasAlumnoInferenciales: respInferenciales,
+              resumenMinPalabras,
+              resumenModelo,
+              respuestaAlumnoResumen: requiereResumen ? respResumen : undefined,
+            };
+
       const res = await fetch("/api/corregir-lectura", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          titulo,
-          texto,
-          edad,
-          intentoActual: 1,
-          preguntas_literales: preguntasLiterales,
-          preguntas_inferenciales: preguntasInferenciales,
-          respuestasAlumnoLiterales: respLiterales,
-          respuestasAlumnoInferenciales: respInferenciales,
-          resumenMinPalabras,
-          resumenModelo,
-          respuestaAlumnoResumen: requiereResumen ? respResumen : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const rawText = await res.text();
-      let data;
+      let data: ResultadoCorreccion & { error?: string };
       try {
         data = JSON.parse(rawText);
       } catch {
@@ -149,7 +257,45 @@ export default function VentanaCorrector({
       if (!res.ok || data.error) {
         throw new Error(data.error || "No se pudo evaluar la respuesta.");
       }
-      setEvaluacion(data);
+
+      if (modoSecuencial && pasoActivo) {
+        setEvaluacion((prev) => {
+          const base: ResultadoCorreccion = prev || {
+            nivel_global: data.nivel_global,
+            nivel_comprension_global: data.nivel_comprension_global,
+            nivel_expresion_global: data.nivel_expresion_global,
+            comentario_general: data.comentario_general,
+            correcciones_literales: [],
+            correcciones_inferenciales: [],
+            correccion_resumen: null,
+          };
+
+          const nuevasLit = [...(base.correcciones_literales || [])];
+          const nuevasInf = [...(base.correcciones_inferenciales || [])];
+          let nuevoRes = base.correccion_resumen || null;
+
+          if (pasoActivo.tipo === "literal" && data.correcciones_literales?.[0]) {
+            nuevasLit[pasoActivo.indice] = data.correcciones_literales[0];
+          } else if (pasoActivo.tipo === "inferencial" && data.correcciones_inferenciales?.[0]) {
+            nuevasInf[pasoActivo.indice] = data.correcciones_inferenciales[0];
+          } else if (pasoActivo.tipo === "resumen" && data.correccion_resumen) {
+            nuevoRes = data.correccion_resumen;
+          }
+
+          return {
+            ...base,
+            nivel_global: data.nivel_global,
+            nivel_comprension_global: data.nivel_comprension_global,
+            nivel_expresion_global: data.nivel_expresion_global,
+            comentario_general: data.comentario_general,
+            correcciones_literales: nuevasLit,
+            correcciones_inferenciales: nuevasInf,
+            correccion_resumen: nuevoRes,
+          };
+        });
+      } else {
+        setEvaluacion(data);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error inesperado al analizar.";
       alert("Error: " + msg);
@@ -183,7 +329,6 @@ export default function VentanaCorrector({
     return (
       <div className="space-y-2.5 pt-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {/* Apartado 1: Comprensión + Indicador debajo */}
           <div className="bg-blue-50/80 border border-blue-200 rounded-lg p-3 flex flex-col justify-between gap-2.5 text-blue-950">
             <div className="text-xs leading-relaxed">
               <strong className="block text-blue-900 mb-1">
@@ -205,7 +350,6 @@ export default function VentanaCorrector({
             </div>
           </div>
 
-          {/* Apartado 2: Expresión escrita + Indicador debajo */}
           <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 flex flex-col justify-between gap-2.5 text-indigo-950">
             <div className="text-xs leading-relaxed">
               <strong className="block text-indigo-900 mb-1">
@@ -228,7 +372,6 @@ export default function VentanaCorrector({
           </div>
         </div>
 
-        {/* Valoración media de ambos apartados */}
         <div className="bg-slate-100/90 border border-slate-300 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs font-bold text-slate-700">
             ⚖️ Valoración media de la respuesta (Comprensión + Expresión):
@@ -245,11 +388,17 @@ export default function VentanaCorrector({
     );
   };
 
+  const deshabilitarBotonEnviar =
+    corrigiendo ||
+    (modoSecuencial
+      ? pasoActivo?.tipo === "resumen" && !resumenCumpleMinimo
+      : !resumenCumpleMinimo);
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-5 print:hidden">
       <div className="bg-white w-full max-w-6xl h-[92vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         {/* Cabecera de la Ventana */}
-        <div className="bg-indigo-900 text-white px-5 py-4 flex items-center justify-between gap-3 shrink-0">
+        <div className="bg-indigo-900 text-white px-5 py-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div>
             <span className="text-[11px] uppercase tracking-wider font-bold text-indigo-200 block">
               DialectIA · IESO Sierra la Mesta · Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
@@ -258,13 +407,47 @@ export default function VentanaCorrector({
               Entrenamiento Interactivo: {titulo}
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={onCerrar}
-            className="px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition cursor-pointer"
-          >
-            ✕ Cerrar ventana
-          </button>
+
+          <div className="flex items-center gap-2">
+            {bloqueoSecuencial ? (
+              <span className="bg-indigo-950/80 border border-indigo-400/30 text-indigo-100 px-3 py-1 rounded-xl text-[11px] font-bold">
+                🔒 Bloqueo secuencial activo
+              </span>
+            ) : (
+              <div className="inline-flex bg-indigo-950/70 p-0.5 rounded-xl border border-indigo-400/30 text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setModoSecuencial(true)}
+                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                    modoSecuencial
+                      ? "bg-white text-indigo-950 shadow-xs"
+                      : "text-indigo-200 hover:text-white"
+                  }`}
+                >
+                  🎯 Paso a paso
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModoSecuencial(false)}
+                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                    !modoSecuencial
+                      ? "bg-white text-indigo-950 shadow-xs"
+                      : "text-indigo-200 hover:text-white"
+                  }`}
+                >
+                  📋 Vista libre
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={onCerrar}
+              className="px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition cursor-pointer"
+            >
+              ✕ Cerrar ventana
+            </button>
+          </div>
         </div>
 
         {/* Cuerpo dividido en 2 columnas */}
@@ -355,216 +538,395 @@ export default function VentanaCorrector({
 
           {/* Columna Derecha */}
           <div className="lg:col-span-7 p-5 overflow-y-auto space-y-6 bg-white">
-            {/* PANEL DESGLOSADO DE RESULTADOS GLOBALES */}
-            {evaluacion && (() => {
-              const mediaGlobal = calcularMediaNiveles(
-                evaluacion.nivel_comprension_global,
-                evaluacion.nivel_expresion_global
-              );
-              return (
-                <div className="border-2 border-slate-300 bg-slate-50/70 rounded-2xl p-4 space-y-3">
-                  <h4 className="text-sm sm:text-base font-extrabold text-slate-900">
-                    Resultados Globales de la Actividad
-                  </h4>
+            {avisoPegado && (
+              <div className="bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-xl px-4 py-2.5 text-xs font-bold shadow-xs">
+                {avisoPegado}
+              </div>
+            )}
 
-                  <p className="text-sm leading-relaxed text-slate-700">
-                    {evaluacion.comentario_general}
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="bg-white border border-blue-200 rounded-xl p-3 flex flex-col justify-between gap-2">
-                      <div>
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
-                          1. {mediaUrl ? "Comprensión Oral" : "Comprensión Lectora"} (Fondo)
-                        </div>
-                        <p className="text-xs text-slate-600 mt-0.5">
-                          Exactitud, localización y deducción de ideas del contenido.
-                        </p>
-                      </div>
-                      <div className="pt-2 border-t border-blue-100 flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold text-blue-900">
-                          Indicador:
-                        </span>
-                        <span
-                          className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
-                            evaluacion.nivel_comprension_global
-                          )}`}
-                        >
-                          {evaluacion.nivel_comprension_global}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="bg-white border border-indigo-200 rounded-xl p-3 flex flex-col justify-between gap-2">
-                      <div>
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">
-                          2. Expresión Escrita / Redacción (Forma)
-                        </div>
-                        <p className="text-xs text-slate-600 mt-0.5">
-                          Ortografía, gramática, puntuación y coherencia textual.
-                        </p>
-                      </div>
-                      <div className="pt-2 border-t border-indigo-100 flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold text-indigo-900">
-                          Indicador:
-                        </span>
-                        <span
-                          className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
-                            evaluacion.nivel_expresion_global
-                          )}`}
-                        >
-                          {evaluacion.nivel_expresion_global}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Valoración general (media de ambos) */}
-                  <div className="bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 block">
-                        Valoración General (Media de Comprensión y Expresión)
-                      </span>
-                      <span className="text-[11px] text-slate-500">
-                        Calculada a partir de los dos indicadores independientes
-                      </span>
-                    </div>
-                    <span
-                      className={`px-3.5 py-1 rounded-full text-xs sm:text-sm font-extrabold border ${estiloNivel(
-                        mediaGlobal
-                      )}`}
-                    >
-                      {mediaGlobal}
+            {/* MODO SECUENCIAL POR DOMINIO */}
+            {modoSecuencial && pasoActivo ? (
+              <div className="space-y-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                    <span>
+                      🎯 Avance secuencial por dominio · Paso {indicePasoSeguro + 1} de{" "}
+                      {pasosSecuenciales.length}
+                    </span>
+                    <span className="text-indigo-700">
+                      {Math.round(((indicePasoSeguro + 1) / pasosSecuenciales.length) * 100)}%
                     </span>
                   </div>
-                </div>
-              );
-            })()}
-
-            {preguntasLiterales.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100/70 inline-block px-3 py-1 rounded-lg">
-                  1. Comprensión Literal
-                </h4>
-                {preguntasLiterales.map((item, idx) => {
-                  const corr = evaluacion?.correcciones_literales?.[idx];
-                  return (
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                     <div
-                      key={idx}
-                      className="border border-slate-200 rounded-xl p-3.5 space-y-2.5 bg-slate-50/40"
-                    >
-                      <label className="block text-sm font-semibold text-slate-900">
-                        {idx + 1}. {item.pregunta}
-                      </label>
-                      <textarea
-                        rows={2}
-                        placeholder="Redacta una oración completa..."
-                        value={respLiterales[idx] || ""}
-                        onChange={(e) => {
-                          const copia = [...respLiterales];
-                          copia[idx] = e.target.value;
-                          setRespLiterales(copia);
-                        }}
-                        className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
-                      />
-                      {corr &&
-                        renderBloqueFeedbackEstructurado(
-                          corr,
-                          "Comprensión (fondo y contenido):",
-                          "Expresión escrita (ortografía, gramática y coherencia):"
-                        )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {preguntasInferenciales.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-800 bg-indigo-100/70 inline-block px-3 py-1 rounded-lg">
-                  2. Comprensión Inferencial
-                </h4>
-                {preguntasInferenciales.map((item, idx) => {
-                  const corr = evaluacion?.correcciones_inferenciales?.[idx];
-                  return (
-                    <div
-                      key={idx}
-                      className="border border-slate-200 rounded-xl p-3.5 space-y-2.5 bg-slate-50/40"
-                    >
-                      <label className="block text-sm font-semibold text-slate-900">
-                        {idx + 1}. {item.pregunta}
-                      </label>
-                      <textarea
-                        rows={2}
-                        placeholder="Redacta tu respuesta razonada..."
-                        value={respInferenciales[idx] || ""}
-                        onChange={(e) => {
-                          const copia = [...respInferenciales];
-                          copia[idx] = e.target.value;
-                          setRespInferenciales(copia);
-                        }}
-                        className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
-                      />
-                      {corr &&
-                        renderBloqueFeedbackEstructurado(
-                          corr,
-                          "Comprensión (fondo y deducción):",
-                          "Expresión escrita (ortografía, gramática y coherencia):"
-                        )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* BLOQUE 3: REDACCIÓN DE RESUMEN OBLIGATORIA */}
-            {requiereResumen && (
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100/80 inline-block px-3 py-1 rounded-lg">
-                    3. Redacción de Resumen (Obligatorio)
-                  </h4>
-                  <span
-                    className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
-                      resumenCumpleMinimo
-                        ? "bg-emerald-100 text-emerald-900 border-emerald-300"
-                        : "bg-amber-100 text-amber-950 border-amber-300"
-                    }`}
-                  >
-                    {palabrasActualesResumen} / {resumenMinPalabras} palabras{" "}
-                    {resumenCumpleMinimo ? "✓" : `(faltan ${palabrasFaltantes})`}
-                  </span>
+                      className="bg-indigo-600 h-full transition-all duration-300"
+                      style={{
+                        width: `${((indicePasoSeguro + 1) / pasosSecuenciales.length) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Alcanza al menos <strong>Conseguido</strong> tanto en Comprensión como en Expresión escrita para desbloquear la siguiente pregunta.
+                  </p>
                 </div>
 
-                <div className="border-2 border-amber-200 rounded-xl p-3.5 space-y-2.5 bg-amber-50/30">
-                  <label className="block text-sm font-semibold text-slate-900">
-                    Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
-                    {resumenMinPalabras} palabras):
-                  </label>
+                {pasoActivo.tipo === "literal" && (
+                  <div className="border-2 border-blue-200 rounded-2xl p-4 space-y-3 bg-blue-50/20">
+                    <span className="text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 inline-block px-3 py-1 rounded-lg">
+                      {pasoActivo.etiqueta}
+                    </span>
+                    <label className="block text-base font-bold text-slate-900">
+                      {pasoActivo.indice + 1}. {pasoActivo.pregunta.pregunta}
+                    </label>
+                    <textarea
+                      rows={3}
+                      onPaste={bloquearPegado}
+                      onDrop={bloquearPegado}
+                      placeholder="Redacta una oración completa con tus propias palabras (pegar deshabilitado)..."
+                      value={respLiterales[pasoActivo.indice] || ""}
+                      onChange={(e) => {
+                        const copia = [...respLiterales];
+                        copia[pasoActivo.indice] = e.target.value;
+                        setRespLiterales(copia);
+                      }}
+                      className="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
+                    />
+                    {corrPasoActivo &&
+                      renderBloqueFeedbackEstructurado(
+                        corrPasoActivo,
+                        "Comprensión (fondo y contenido):",
+                        "Expresión escrita (ortografía, gramática y coherencia):"
+                      )}
+                  </div>
+                )}
 
-                  <textarea
-                    rows={5}
-                    placeholder={`Escribe aquí tu resumen (debes alcanzar al menos ${resumenMinPalabras} palabras para poder enviarlo)...`}
-                    value={respResumen}
-                    onChange={(e) => setRespResumen(e.target.value)}
-                    className="w-full bg-white border border-amber-300 rounded-lg p-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-600"
-                  />
+                {pasoActivo.tipo === "inferencial" && (
+                  <div className="border-2 border-indigo-200 rounded-2xl p-4 space-y-3 bg-indigo-50/20">
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-800 bg-indigo-100 inline-block px-3 py-1 rounded-lg">
+                      {pasoActivo.etiqueta}
+                    </span>
+                    <label className="block text-base font-bold text-slate-900">
+                      {pasoActivo.indice + 1}. {pasoActivo.pregunta.pregunta}
+                    </label>
+                    <textarea
+                      rows={3}
+                      onPaste={bloquearPegado}
+                      onDrop={bloquearPegado}
+                      placeholder="Redacta tu respuesta razonada con tus propias palabras (pegar deshabilitado)..."
+                      value={respInferenciales[pasoActivo.indice] || ""}
+                      onChange={(e) => {
+                        const copia = [...respInferenciales];
+                        copia[pasoActivo.indice] = e.target.value;
+                        setRespInferenciales(copia);
+                      }}
+                      className="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
+                    />
+                    {corrPasoActivo &&
+                      renderBloqueFeedbackEstructurado(
+                        corrPasoActivo,
+                        "Comprensión (fondo y deducción):",
+                        "Expresión escrita (ortografía, gramática y coherencia):"
+                      )}
+                  </div>
+                )}
 
-                  {!resumenCumpleMinimo && (
-                    <p className="text-xs font-semibold text-amber-900">
-                      ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
-                      {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar la corrección.
-                    </p>
-                  )}
-
-                  {evaluacion?.correccion_resumen &&
-                    renderBloqueFeedbackEstructurado(
-                      evaluacion.correccion_resumen,
-                      "Comprensión (síntesis de ideas principales):",
-                      "Expresión escrita (ortografía, puntuación y cohesión):"
+                {pasoActivo.tipo === "resumen" && (
+                  <div className="border-2 border-amber-200 rounded-2xl p-4 space-y-3 bg-amber-50/30">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100 inline-block px-3 py-1 rounded-lg">
+                        {pasoActivo.etiqueta}
+                      </span>
+                      <span
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                          resumenCumpleMinimo
+                            ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                            : "bg-amber-100 text-amber-950 border-amber-300"
+                        }`}
+                      >
+                        {palabrasActualesResumen} / {resumenMinPalabras} palabras{" "}
+                        {resumenCumpleMinimo ? "✓" : `(faltan ${palabrasFaltantes})`}
+                      </span>
+                    </div>
+                    <label className="block text-base font-bold text-slate-900">
+                      Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
+                      {resumenMinPalabras} palabras):
+                    </label>
+                    <textarea
+                      rows={5}
+                      onPaste={bloquearPegado}
+                      onDrop={bloquearPegado}
+                      placeholder={`Escribe aquí tu resumen con tus propias palabras (mínimo ${resumenMinPalabras} palabras, pegar deshabilitado)...`}
+                      value={respResumen}
+                      onChange={(e) => setRespResumen(e.target.value)}
+                      className="w-full bg-white border border-amber-300 rounded-xl p-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-600"
+                    />
+                    {!resumenCumpleMinimo && (
+                      <p className="text-xs font-semibold text-amber-900">
+                        ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
+                        {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar la corrección.
+                      </p>
                     )}
+                    {corrPasoActivo &&
+                      renderBloqueFeedbackEstructurado(
+                        corrPasoActivo,
+                        "Comprensión (síntesis de ideas principales):",
+                        "Expresión escrita (ortografía, puntuación y cohesión):"
+                      )}
+                  </div>
+                )}
+
+                {/* Controles de avance secuencial */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <button
+                    type="button"
+                    disabled={indicePasoSeguro === 0}
+                    onClick={() => setPasoActual((p) => Math.max(0, p - 1))}
+                    className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-slate-700 cursor-pointer"
+                  >
+                    ⬅️ Pregunta anterior
+                  </button>
+
+                  {pasoActivoDominado ? (
+                    esUltimoPaso ? (
+                      <div className="px-4 py-2 rounded-xl bg-emerald-100 border border-emerald-400 text-emerald-950 text-xs font-extrabold">
+                        🏆 ¡Actividad completada con dominio en ambos indicadores!
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPasoActual((p) => Math.min(pasosSecuenciales.length - 1, p + 1))
+                        }
+                        className="px-5 py-2.5 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-extrabold shadow-sm transition cursor-pointer"
+                      >
+                        ✅ Dominado · Siguiente pregunta ➡️
+                      </button>
+                    )
+                  ) : (
+                    <span className="text-xs font-semibold text-slate-500">
+                      🔒 Alcanza <strong>Conseguido</strong> en Comprensión y Expresión para avanzar
+                    </span>
+                  )}
                 </div>
               </div>
+            ) : (
+              /* VISTA COMPLETA (TODAS LAS PREGUNTAS) */
+              <>
+                {evaluacion && (() => {
+                  const mediaGlobal = calcularMediaNiveles(
+                    evaluacion.nivel_comprension_global,
+                    evaluacion.nivel_expresion_global
+                  );
+                  return (
+                    <div className="border-2 border-slate-300 bg-slate-50/70 rounded-2xl p-4 space-y-3">
+                      <h4 className="text-sm sm:text-base font-extrabold text-slate-900">
+                        Resultados Globales de la Actividad
+                      </h4>
+
+                      <p className="text-sm leading-relaxed text-slate-700">
+                        {evaluacion.comentario_general}
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-white border border-blue-200 rounded-xl p-3 flex flex-col justify-between gap-2">
+                          <div>
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
+                              1. {mediaUrl ? "Comprensión Oral" : "Comprensión Lectora"} (Fondo)
+                            </div>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                              Exactitud, localización y deducción de ideas del contenido.
+                            </p>
+                          </div>
+                          <div className="pt-2 border-t border-blue-100 flex items-center justify-between gap-2">
+                            <span className="text-[11px] font-bold text-blue-900">
+                              Indicador:
+                            </span>
+                            <span
+                              className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                                evaluacion.nivel_comprension_global
+                              )}`}
+                            >
+                              {evaluacion.nivel_comprension_global}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-indigo-200 rounded-xl p-3 flex flex-col justify-between gap-2">
+                          <div>
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">
+                              2. Expresión Escrita / Redacción (Forma)
+                            </div>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                              Ortografía, gramática, puntuación y coherencia textual.
+                            </p>
+                          </div>
+                          <div className="pt-2 border-t border-indigo-100 flex items-center justify-between gap-2">
+                            <span className="text-[11px] font-bold text-indigo-900">
+                              Indicador:
+                            </span>
+                            <span
+                              className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                                evaluacion.nivel_expresion_global
+                              )}`}
+                            >
+                              {evaluacion.nivel_expresion_global}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 block">
+                            Valoración General (Media de Comprensión y Expresión)
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            Calculada a partir de los dos indicadores independientes
+                          </span>
+                        </div>
+                        <span
+                          className={`px-3.5 py-1 rounded-full text-xs sm:text-sm font-extrabold border ${estiloNivel(
+                            mediaGlobal
+                          )}`}
+                        >
+                          {mediaGlobal}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {preguntasLiterales.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100/70 inline-block px-3 py-1 rounded-lg">
+                      1. Comprensión Literal
+                    </h4>
+                    {preguntasLiterales.map((item, idx) => {
+                      const corr = evaluacion?.correcciones_literales?.[idx];
+                      return (
+                        <div
+                          key={idx}
+                          className="border border-slate-200 rounded-xl p-3.5 space-y-2.5 bg-slate-50/40"
+                        >
+                          <label className="block text-sm font-semibold text-slate-900">
+                            {idx + 1}. {item.pregunta}
+                          </label>
+                          <textarea
+                            rows={2}
+                            onPaste={bloquearPegado}
+                            onDrop={bloquearPegado}
+                            placeholder="Redacta una oración completa (pegar deshabilitado)..."
+                            value={respLiterales[idx] || ""}
+                            onChange={(e) => {
+                              const copia = [...respLiterales];
+                              copia[idx] = e.target.value;
+                              setRespLiterales(copia);
+                            }}
+                            className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
+                          />
+                          {corr &&
+                            renderBloqueFeedbackEstructurado(
+                              corr,
+                              "Comprensión (fondo y contenido):",
+                              "Expresión escrita (ortografía, gramática y coherencia):"
+                            )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {preguntasInferenciales.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-800 bg-indigo-100/70 inline-block px-3 py-1 rounded-lg">
+                      2. Comprensión Inferencial
+                    </h4>
+                    {preguntasInferenciales.map((item, idx) => {
+                      const corr = evaluacion?.correcciones_inferenciales?.[idx];
+                      return (
+                        <div
+                          key={idx}
+                          className="border border-slate-200 rounded-xl p-3.5 space-y-2.5 bg-slate-50/40"
+                        >
+                          <label className="block text-sm font-semibold text-slate-900">
+                            {idx + 1}. {item.pregunta}
+                          </label>
+                          <textarea
+                            rows={2}
+                            onPaste={bloquearPegado}
+                            onDrop={bloquearPegado}
+                            placeholder="Redacta tu respuesta razonada (pegar deshabilitado)..."
+                            value={respInferenciales[idx] || ""}
+                            onChange={(e) => {
+                              const copia = [...respInferenciales];
+                              copia[idx] = e.target.value;
+                              setRespInferenciales(copia);
+                            }}
+                            className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
+                          />
+                          {corr &&
+                            renderBloqueFeedbackEstructurado(
+                              corr,
+                              "Comprensión (fondo y deducción):",
+                              "Expresión escrita (ortografía, gramática y coherencia):"
+                            )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {requiereResumen && (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100/80 inline-block px-3 py-1 rounded-lg">
+                        3. Redacción de Resumen (Obligatorio)
+                      </h4>
+                      <span
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                          resumenCumpleMinimo
+                            ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                            : "bg-amber-100 text-amber-950 border-amber-300"
+                        }`}
+                      >
+                        {palabrasActualesResumen} / {resumenMinPalabras} palabras{" "}
+                        {resumenCumpleMinimo ? "✓" : `(faltan ${palabrasFaltantes})`}
+                      </span>
+                    </div>
+
+                    <div className="border-2 border-amber-200 rounded-xl p-3.5 space-y-2.5 bg-amber-50/30">
+                      <label className="block text-sm font-semibold text-slate-900">
+                        Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
+                        {resumenMinPalabras} palabras):
+                      </label>
+
+                      <textarea
+                        rows={5}
+                        onPaste={bloquearPegado}
+                        onDrop={bloquearPegado}
+                        placeholder={`Escribe aquí tu resumen con tus propias palabras (debes alcanzar al menos ${resumenMinPalabras} palabras, pegar deshabilitado)...`}
+                        value={respResumen}
+                        onChange={(e) => setRespResumen(e.target.value)}
+                        className="w-full bg-white border border-amber-300 rounded-lg p-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-600"
+                      />
+
+                      {!resumenCumpleMinimo && (
+                        <p className="text-xs font-semibold text-amber-900">
+                          ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
+                          {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar la corrección.
+                        </p>
+                      )}
+
+                      {evaluacion?.correccion_resumen &&
+                        renderBloqueFeedbackEstructurado(
+                          evaluacion.correccion_resumen,
+                          "Comprensión (síntesis de ideas principales):",
+                          "Expresión escrita (ortografía, puntuación y cohesión):"
+                        )}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -579,6 +941,7 @@ export default function VentanaCorrector({
               setRespInferenciales(preguntasInferenciales.map(() => ""));
               setRespResumen("");
               setEvaluacion(null);
+              setPasoActual(0);
             }}
             className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
           >
@@ -595,10 +958,10 @@ export default function VentanaCorrector({
             </button>
             <button
               type="button"
-              disabled={corrigiendo || !resumenCumpleMinimo}
+              disabled={deshabilitarBotonEnviar}
               onClick={manejarCorreccion}
               title={
-                !resumenCumpleMinimo
+                !modoSecuencial && !resumenCumpleMinimo
                   ? `Completa el resumen (faltan ${palabrasFaltantes} palabras)`
                   : undefined
               }
@@ -606,6 +969,8 @@ export default function VentanaCorrector({
             >
               {corrigiendo
                 ? "Analizando..."
+                : modoSecuencial
+                ? "🧭 Comprobar esta respuesta"
                 : !resumenCumpleMinimo
                 ? `🔒 Faltan ${palabrasFaltantes} pal. en el resumen`
                 : "🧭 Probar entrenador IA"}

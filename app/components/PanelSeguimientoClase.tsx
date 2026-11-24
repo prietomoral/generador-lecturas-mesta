@@ -17,6 +17,12 @@ function calcularMediaNiveles(nivelComp: string, nivelExpr: string): string {
   return NIVELES_ESCALA[mediaIdx] || "No conseguido";
 }
 
+interface ProgresoPasos {
+  dominados: number;
+  total: number;
+  paso_actual_etiqueta: string;
+}
+
 interface EntregaAlumno {
   id: string;
   nombre_alumno: string;
@@ -25,17 +31,22 @@ interface EntregaAlumno {
   nivel_comprension?: string | null;
   nivel_expresion?: string | null;
   superada: boolean;
+  ultima_evaluacion?: {
+    progreso_pasos?: ProgresoPasos;
+  } | null;
   updated_at: string;
 }
 
 interface PanelSeguimientoClaseProps {
   codigoActividad: string;
   tituloActividad: string;
+  bloqueoSecuencial?: boolean;
 }
 
 export default function PanelSeguimientoClase({
   codigoActividad,
   tituloActividad,
+  bloqueoSecuencial = true,
 }: PanelSeguimientoClaseProps) {
   const [entregas, setEntregas] = useState<EntregaAlumno[]>([]);
   const [cargando, setCargando] = useState(false);
@@ -53,13 +64,13 @@ export default function PanelSeguimientoClase({
       const { data, error } = await supabase
         .from("entregas")
         .select(
-          "id, nombre_alumno, intentos, nivel_logro, nivel_comprension, nivel_expresion, superada, updated_at"
+          "id, nombre_alumno, intentos, nivel_logro, nivel_comprension, nivel_expresion, superada, ultima_evaluacion, updated_at"
         )
         .eq("actividad_codigo", codigoActividad)
         .order("updated_at", { ascending: false });
 
       if (!error && data) {
-        setEntregas(data);
+        setEntregas(data as EntregaAlumno[]);
       }
     } finally {
       setCargando(false);
@@ -67,10 +78,34 @@ export default function PanelSeguimientoClase({
   }, [codigoActividad]);
 
   useEffect(() => {
-    cargarEntregas();
-    const intervalo = setInterval(cargarEntregas, 10000);
-    return () => clearInterval(intervalo);
-  }, [cargarEntregas]);
+    if (!codigoActividad) return;
+
+    let activo = true;
+
+    const inicializar = async () => {
+      const { data, error } = await supabase
+        .from("entregas")
+        .select(
+          "id, nombre_alumno, intentos, nivel_logro, nivel_comprension, nivel_expresion, superada, ultima_evaluacion, updated_at"
+        )
+        .eq("actividad_codigo", codigoActividad)
+        .order("updated_at", { ascending: false });
+
+      if (activo && !error && data) {
+        setEntregas(data as EntregaAlumno[]);
+      }
+    };
+
+    void inicializar();
+    const intervalo = setInterval(() => {
+      void cargarEntregas();
+    }, 10000);
+
+    return () => {
+      activo = false;
+      clearInterval(intervalo);
+    };
+  }, [codigoActividad, cargarEntregas]);
 
   const copiarEnlace = () => {
     navigator.clipboard.writeText(enlaceAlumno);
@@ -98,10 +133,19 @@ export default function PanelSeguimientoClase({
           <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
             Aula Interactiva Activa · {tituloActividad}
           </span>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             <span className="text-sm text-slate-700">Código para el alumnado:</span>
             <span className="font-mono text-base font-extrabold bg-indigo-900 text-white px-3 py-0.5 rounded-lg">
               {codigoActividad}
+            </span>
+            <span
+              className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                bloqueoSecuencial
+                  ? "bg-indigo-100 text-indigo-950 border-indigo-300"
+                  : "bg-slate-200/80 text-slate-800 border-slate-300"
+              }`}
+            >
+              {bloqueoSecuencial ? "🔒 Avance secuencial obligatorio" : "🔓 Avance libre"}
             </span>
           </div>
         </div>
@@ -137,7 +181,8 @@ export default function PanelSeguimientoClase({
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500">
                 <th className="py-2.5 px-4">Alumno/a</th>
-                <th className="py-2.5 px-3 text-center">Intentos</th>
+                <th className="py-2.5 px-3 text-center">Progreso General</th>
+                <th className="py-2.5 px-3 text-center">Entregas</th>
                 <th className="py-2.5 px-3 text-center">1. Comprensión</th>
                 <th className="py-2.5 px-3 text-center">2. Expresión</th>
                 <th className="py-2.5 px-3 text-center">Media General</th>
@@ -153,14 +198,60 @@ export default function PanelSeguimientoClase({
                     ? calcularMediaNiveles(e.nivel_comprension, e.nivel_expresion)
                     : e.nivel_logro;
 
+                const progreso = e.ultima_evaluacion?.progreso_pasos;
+                const dominados = progreso?.dominados ?? 0;
+                const totalPasos = progreso?.total ?? 0;
+                const porcentaje =
+                  totalPasos > 0 ? Math.round((dominados / totalPasos) * 100) : 0;
+                const todosDominados = totalPasos > 0 && dominados >= totalPasos;
+
                 return (
                   <tr key={e.id} className="hover:bg-slate-50/70">
                     <td className="py-2.5 px-4 font-semibold text-slate-800">
                       {e.nombre_alumno}
                     </td>
-                    <td className="py-2.5 px-3 text-center font-mono text-slate-600">
+
+                    <td className="py-2.5 px-3 text-center min-w-[150px]">
+                      {totalPasos > 0 ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                            <span>
+                              {dominados} / {totalPasos} pasos
+                            </span>
+                            <span className="text-indigo-700">{porcentaje}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-300 ${
+                                e.superada || todosDominados
+                                  ? "bg-emerald-600"
+                                  : "bg-indigo-600"
+                              }`}
+                              style={{ width: `${porcentaje}%` }}
+                            />
+                          </div>
+                          {progreso?.paso_actual_etiqueta && !e.superada && (
+                            <div className="text-[10px] font-semibold text-slate-500 truncate">
+                              {todosDominados
+                                ? "📤 Pendiente de entrega final"
+                                : bloqueoSecuencial
+                                ? `✍️ Activa: ${progreso.paso_actual_etiqueta}`
+                                : `🔓 ${progreso.paso_actual_etiqueta}`}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">En curso</span>
+                      )}
+                    </td>
+
+                    <td
+                      title="Entregas globales realizadas (comprobar pasos individuales no consume intentos)"
+                      className="py-2.5 px-3 text-center font-mono text-slate-600"
+                    >
                       {e.intentos} / 10
                     </td>
+
                     <td className="py-2.5 px-3 text-center">
                       <span
                         className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeNivel(
@@ -170,6 +261,7 @@ export default function PanelSeguimientoClase({
                         {nivelComp}
                       </span>
                     </td>
+
                     <td className="py-2.5 px-3 text-center">
                       <span
                         className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeNivel(
@@ -179,6 +271,7 @@ export default function PanelSeguimientoClase({
                         {nivelExpr}
                       </span>
                     </td>
+
                     <td className="py-2.5 px-3 text-center">
                       <span
                         className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${badgeNivel(
@@ -188,6 +281,7 @@ export default function PanelSeguimientoClase({
                         {mediaGeneral}
                       </span>
                     </td>
+
                     <td className="py-2.5 px-4 text-center">
                       {e.superada ? (
                         <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900">
@@ -196,6 +290,10 @@ export default function PanelSeguimientoClase({
                       ) : e.intentos >= 10 ? (
                         <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-900">
                           ⛔ 10/10 agotados
+                        </span>
+                      ) : todosDominados ? (
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-900">
+                          📤 Listo para entregar
                         </span>
                       ) : (
                         <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900">

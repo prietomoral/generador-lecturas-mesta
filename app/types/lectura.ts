@@ -14,6 +14,7 @@ export interface ResultadoLectura {
   mediaTipo?: MediaTipo;
   resumen_min_palabras?: number;
   resumen_modelo?: string;
+  bloqueo_secuencial?: boolean;
 }
 
 export interface FormLectura {
@@ -33,6 +34,7 @@ export interface FormLectura {
   numInferenciales: number;
   incluirResumen?: boolean;
   minPalabrasResumen?: number;
+  bloqueo_secuencial?: boolean;
 }
 
 export const TEMAS_BASE = [
