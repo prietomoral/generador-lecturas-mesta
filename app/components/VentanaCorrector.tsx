@@ -4,7 +4,9 @@ import React, { useState } from "react";
 import { MediaTipo, Pregunta } from "../types/lectura";
 
 interface CorreccionItem {
-  nivel_pregunta: string;
+  nivel_comprension: string;
+  nivel_expresion: string;
+  nivel_media?: string;
   estado: "Correcta" | "Parcial" | "A mejorar" | string;
   pista_comprension: string;
   consejo_redaccion: string;
@@ -12,6 +14,8 @@ interface CorreccionItem {
 
 interface ResultadoCorreccion {
   nivel_global: string;
+  nivel_comprension_global: string;
+  nivel_expresion_global: string;
   comentario_general: string;
   correcciones_literales: CorreccionItem[];
   correcciones_inferenciales: CorreccionItem[];
@@ -31,6 +35,20 @@ interface VentanaCorrectorProps {
   preguntasInferenciales: Pregunta[];
   resumenMinPalabras?: number;
   resumenModelo?: string;
+}
+
+const NIVELES_ESCALA = [
+  "No conseguido",
+  "Bajamente Conseguido",
+  "Conseguido",
+  "Altamente Conseguido",
+];
+
+function calcularMediaNiveles(nivelComp: string, nivelExpr: string): string {
+  const idxComp = Math.max(0, NIVELES_ESCALA.indexOf(nivelComp));
+  const idxExpr = Math.max(0, NIVELES_ESCALA.indexOf(nivelExpr));
+  const mediaIdx = Math.floor((idxComp + idxExpr) / 2);
+  return NIVELES_ESCALA[mediaIdx] || "No conseguido";
 }
 
 function contarPalabras(texto: string): number {
@@ -153,6 +171,80 @@ export default function VentanaCorrector({
     }
   };
 
+  const renderBloqueFeedbackEstructurado = (
+    corr: CorreccionItem,
+    subtituloComp: string,
+    subtituloExpr: string
+  ) => {
+    const mediaItem =
+      corr.nivel_media ||
+      calcularMediaNiveles(corr.nivel_comprension, corr.nivel_expresion);
+
+    return (
+      <div className="space-y-2.5 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {/* Apartado 1: Comprensión + Indicador debajo */}
+          <div className="bg-blue-50/80 border border-blue-200 rounded-lg p-3 flex flex-col justify-between gap-2.5 text-blue-950">
+            <div className="text-xs leading-relaxed">
+              <strong className="block text-blue-900 mb-1">
+                🧭 {subtituloComp}
+              </strong>
+              <p>{corr.pista_comprension}</p>
+            </div>
+            <div className="pt-2 border-t border-blue-200/80 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-blue-900">
+                Indicador de logro:
+              </span>
+              <span
+                className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                  corr.nivel_comprension
+                )}`}
+              >
+                {corr.nivel_comprension}
+              </span>
+            </div>
+          </div>
+
+          {/* Apartado 2: Expresión escrita + Indicador debajo */}
+          <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 flex flex-col justify-between gap-2.5 text-indigo-950">
+            <div className="text-xs leading-relaxed">
+              <strong className="block text-indigo-900 mb-1">
+                ✍️ {subtituloExpr}
+              </strong>
+              <p>{corr.consejo_redaccion}</p>
+            </div>
+            <div className="pt-2 border-t border-indigo-200/80 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-indigo-900">
+                Indicador de logro:
+              </span>
+              <span
+                className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                  corr.nivel_expresion
+                )}`}
+              >
+                {corr.nivel_expresion}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Valoración media de ambos apartados */}
+        <div className="bg-slate-100/90 border border-slate-300 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs font-bold text-slate-700">
+            ⚖️ Valoración media de la respuesta (Comprensión + Expresión):
+          </span>
+          <span
+            className={`text-xs font-extrabold px-3 py-0.5 rounded-full border ${estiloNivel(
+              mediaItem
+            )}`}
+          >
+            {mediaItem}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-5 print:hidden">
       <div className="bg-white w-full max-w-6xl h-[92vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
@@ -263,23 +355,91 @@ export default function VentanaCorrector({
 
           {/* Columna Derecha */}
           <div className="lg:col-span-7 p-5 overflow-y-auto space-y-6 bg-white">
-            {evaluacion && (
-              <div
-                className={`border-2 rounded-2xl p-4 space-y-2 ${estiloNivel(
-                  evaluacion.nivel_global
-                )}`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="text-base sm:text-lg font-extrabold">
-                    Valoración Global: <span className="underline">{evaluacion.nivel_global}</span>
+            {/* PANEL DESGLOSADO DE RESULTADOS GLOBALES */}
+            {evaluacion && (() => {
+              const mediaGlobal = calcularMediaNiveles(
+                evaluacion.nivel_comprension_global,
+                evaluacion.nivel_expresion_global
+              );
+              return (
+                <div className="border-2 border-slate-300 bg-slate-50/70 rounded-2xl p-4 space-y-3">
+                  <h4 className="text-sm sm:text-base font-extrabold text-slate-900">
+                    Resultados Globales de la Actividad
                   </h4>
-                  <span className="px-2.5 py-0.5 rounded-full bg-white/70 text-slate-900 text-[11px] font-bold">
-                    Modo Entrenador · Sin penalización NEAE
-                  </span>
+
+                  <p className="text-sm leading-relaxed text-slate-700">
+                    {evaluacion.comentario_general}
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-white border border-blue-200 rounded-xl p-3 flex flex-col justify-between gap-2">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
+                          1. {mediaUrl ? "Comprensión Oral" : "Comprensión Lectora"} (Fondo)
+                        </div>
+                        <p className="text-xs text-slate-600 mt-0.5">
+                          Exactitud, localización y deducción de ideas del contenido.
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-blue-100 flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-blue-900">
+                          Indicador:
+                        </span>
+                        <span
+                          className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                            evaluacion.nivel_comprension_global
+                          )}`}
+                        >
+                          {evaluacion.nivel_comprension_global}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-indigo-200 rounded-xl p-3 flex flex-col justify-between gap-2">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">
+                          2. Expresión Escrita / Redacción (Forma)
+                        </div>
+                        <p className="text-xs text-slate-600 mt-0.5">
+                          Ortografía, gramática, puntuación y coherencia textual.
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-indigo-100 flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-indigo-900">
+                          Indicador:
+                        </span>
+                        <span
+                          className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                            evaluacion.nivel_expresion_global
+                          )}`}
+                        >
+                          {evaluacion.nivel_expresion_global}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Valoración general (media de ambos) */}
+                  <div className="bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 block">
+                        Valoración General (Media de Comprensión y Expresión)
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        Calculada a partir de los dos indicadores independientes
+                      </span>
+                    </div>
+                    <span
+                      className={`px-3.5 py-1 rounded-full text-xs sm:text-sm font-extrabold border ${estiloNivel(
+                        mediaGlobal
+                      )}`}
+                    >
+                      {mediaGlobal}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-sm leading-relaxed">{evaluacion.comentario_general}</p>
-              </div>
-            )}
+              );
+            })()}
 
             {preguntasLiterales.length > 0 && (
               <div className="space-y-3">
@@ -293,20 +453,9 @@ export default function VentanaCorrector({
                       key={idx}
                       className="border border-slate-200 rounded-xl p-3.5 space-y-2.5 bg-slate-50/40"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <label className="text-sm font-semibold text-slate-900">
-                          {idx + 1}. {item.pregunta}
-                        </label>
-                        {corr && (
-                          <span
-                            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${estiloNivel(
-                              corr.nivel_pregunta
-                            )}`}
-                          >
-                            {corr.nivel_pregunta}
-                          </span>
-                        )}
-                      </div>
+                      <label className="block text-sm font-semibold text-slate-900">
+                        {idx + 1}. {item.pregunta}
+                      </label>
                       <textarea
                         rows={2}
                         placeholder="Redacta una oración completa..."
@@ -318,22 +467,12 @@ export default function VentanaCorrector({
                         }}
                         className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
                       />
-                      {corr && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                          <div className="text-xs bg-blue-50/80 border border-blue-200 rounded-lg p-2.5 text-blue-950">
-                            <strong className="block text-blue-800 mb-0.5">
-                              🧭 Pista de comprensión:
-                            </strong>
-                            {corr.pista_comprension}
-                          </div>
-                          <div className="text-xs bg-indigo-50/80 border border-indigo-200 rounded-lg p-2.5 text-indigo-950">
-                            <strong className="block text-indigo-800 mb-0.5">
-                              ✍️ Entrenamiento de redacción:
-                            </strong>
-                            {corr.consejo_redaccion}
-                          </div>
-                        </div>
-                      )}
+                      {corr &&
+                        renderBloqueFeedbackEstructurado(
+                          corr,
+                          "Comprensión (fondo y contenido):",
+                          "Expresión escrita (ortografía, gramática y coherencia):"
+                        )}
                     </div>
                   );
                 })}
@@ -352,20 +491,9 @@ export default function VentanaCorrector({
                       key={idx}
                       className="border border-slate-200 rounded-xl p-3.5 space-y-2.5 bg-slate-50/40"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <label className="text-sm font-semibold text-slate-900">
-                          {idx + 1}. {item.pregunta}
-                        </label>
-                        {corr && (
-                          <span
-                            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${estiloNivel(
-                              corr.nivel_pregunta
-                            )}`}
-                          >
-                            {corr.nivel_pregunta}
-                          </span>
-                        )}
-                      </div>
+                      <label className="block text-sm font-semibold text-slate-900">
+                        {idx + 1}. {item.pregunta}
+                      </label>
                       <textarea
                         rows={2}
                         placeholder="Redacta tu respuesta razonada..."
@@ -377,22 +505,12 @@ export default function VentanaCorrector({
                         }}
                         className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
                       />
-                      {corr && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                          <div className="text-xs bg-blue-50/80 border border-blue-200 rounded-lg p-2.5 text-blue-950">
-                            <strong className="block text-blue-800 mb-0.5">
-                              🧭 Pista de comprensión:
-                            </strong>
-                            {corr.pista_comprension}
-                          </div>
-                          <div className="text-xs bg-indigo-50/80 border border-indigo-200 rounded-lg p-2.5 text-indigo-950">
-                            <strong className="block text-indigo-800 mb-0.5">
-                              ✍️ Entrenamiento de redacción:
-                            </strong>
-                            {corr.consejo_redaccion}
-                          </div>
-                        </div>
-                      )}
+                      {corr &&
+                        renderBloqueFeedbackEstructurado(
+                          corr,
+                          "Comprensión (fondo y deducción):",
+                          "Expresión escrita (ortografía, gramática y coherencia):"
+                        )}
                     </div>
                   );
                 })}
@@ -419,21 +537,10 @@ export default function VentanaCorrector({
                 </div>
 
                 <div className="border-2 border-amber-200 rounded-xl p-3.5 space-y-2.5 bg-amber-50/30">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-sm font-semibold text-slate-900">
-                      Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
-                      {resumenMinPalabras} palabras):
-                    </label>
-                    {evaluacion?.correccion_resumen && (
-                      <span
-                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${estiloNivel(
-                          evaluacion.correccion_resumen.nivel_pregunta
-                        )}`}
-                      >
-                        {evaluacion.correccion_resumen.nivel_pregunta}
-                      </span>
-                    )}
-                  </div>
+                  <label className="block text-sm font-semibold text-slate-900">
+                    Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
+                    {resumenMinPalabras} palabras):
+                  </label>
 
                   <textarea
                     rows={5}
@@ -450,22 +557,12 @@ export default function VentanaCorrector({
                     </p>
                   )}
 
-                  {evaluacion?.correccion_resumen && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                      <div className="text-xs bg-blue-50/80 border border-blue-200 rounded-lg p-2.5 text-blue-950">
-                        <strong className="block text-blue-800 mb-0.5">
-                          🧭 Pista de comprensión (ideas clave):
-                        </strong>
-                        {evaluacion.correccion_resumen.pista_comprension}
-                      </div>
-                      <div className="text-xs bg-indigo-50/80 border border-indigo-200 rounded-lg p-2.5 text-indigo-950">
-                        <strong className="block text-indigo-800 mb-0.5">
-                          ✍️ Entrenamiento de síntesis y cohesión:
-                        </strong>
-                        {evaluacion.correccion_resumen.consejo_redaccion}
-                      </div>
-                    </div>
-                  )}
+                  {evaluacion?.correccion_resumen &&
+                    renderBloqueFeedbackEstructurado(
+                      evaluacion.correccion_resumen,
+                      "Comprensión (síntesis de ideas principales):",
+                      "Expresión escrita (ortografía, puntuación y cohesión):"
+                    )}
                 </div>
               </div>
             )}

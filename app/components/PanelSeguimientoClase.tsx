@@ -3,11 +3,27 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 
+const NIVELES_ESCALA = [
+  "No conseguido",
+  "Bajamente Conseguido",
+  "Conseguido",
+  "Altamente Conseguido",
+];
+
+function calcularMediaNiveles(nivelComp: string, nivelExpr: string): string {
+  const idxComp = Math.max(0, NIVELES_ESCALA.indexOf(nivelComp));
+  const idxExpr = Math.max(0, NIVELES_ESCALA.indexOf(nivelExpr));
+  const mediaIdx = Math.floor((idxComp + idxExpr) / 2);
+  return NIVELES_ESCALA[mediaIdx] || "No conseguido";
+}
+
 interface EntregaAlumno {
   id: string;
   nombre_alumno: string;
   intentos: number;
   nivel_logro: string;
+  nivel_comprension?: string | null;
+  nivel_expresion?: string | null;
   superada: boolean;
   updated_at: string;
 }
@@ -36,7 +52,9 @@ export default function PanelSeguimientoClase({
     try {
       const { data, error } = await supabase
         .from("entregas")
-        .select("id, nombre_alumno, intentos, nivel_logro, superada, updated_at")
+        .select(
+          "id, nombre_alumno, intentos, nivel_logro, nivel_comprension, nivel_expresion, superada, updated_at"
+        )
         .eq("actividad_codigo", codigoActividad)
         .order("updated_at", { ascending: false });
 
@@ -119,46 +137,75 @@ export default function PanelSeguimientoClase({
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500">
                 <th className="py-2.5 px-4">Alumno/a</th>
-                <th className="py-2.5 px-4 text-center">Intentos</th>
-                <th className="py-2.5 px-4 text-center">Nivel de logro</th>
+                <th className="py-2.5 px-3 text-center">Intentos</th>
+                <th className="py-2.5 px-3 text-center">1. Comprensión</th>
+                <th className="py-2.5 px-3 text-center">2. Expresión</th>
+                <th className="py-2.5 px-3 text-center">Media General</th>
                 <th className="py-2.5 px-4 text-center">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {entregas.map((e) => (
-                <tr key={e.id} className="hover:bg-slate-50/70">
-                  <td className="py-2.5 px-4 font-semibold text-slate-800">
-                    {e.nombre_alumno}
-                  </td>
-                  <td className="py-2.5 px-4 text-center font-mono text-slate-600">
-                    {e.intentos} / 10
-                  </td>
-                  <td className="py-2.5 px-4 text-center">
-                    <span
-                      className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeNivel(
-                        e.nivel_logro
-                      )}`}
-                    >
-                      {e.nivel_logro}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-center">
-                    {e.superada ? (
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900">
-                        ✅ Superada
+              {entregas.map((e) => {
+                const nivelComp = e.nivel_comprension || e.nivel_logro;
+                const nivelExpr = e.nivel_expresion || e.nivel_logro;
+                const mediaGeneral =
+                  e.nivel_comprension && e.nivel_expresion
+                    ? calcularMediaNiveles(e.nivel_comprension, e.nivel_expresion)
+                    : e.nivel_logro;
+
+                return (
+                  <tr key={e.id} className="hover:bg-slate-50/70">
+                    <td className="py-2.5 px-4 font-semibold text-slate-800">
+                      {e.nombre_alumno}
+                    </td>
+                    <td className="py-2.5 px-3 text-center font-mono text-slate-600">
+                      {e.intentos} / 10
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeNivel(
+                          nivelComp
+                        )}`}
+                      >
+                        {nivelComp}
                       </span>
-                    ) : e.intentos >= 10 ? (
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-900">
-                        ⛔ 10/10 agotados
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeNivel(
+                          nivelExpr
+                        )}`}
+                      >
+                        {nivelExpr}
                       </span>
-                    ) : (
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900">
-                        ⏳ Entrenando
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${badgeNivel(
+                          mediaGeneral
+                        )}`}
+                      >
+                        {mediaGeneral}
                       </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-2.5 px-4 text-center">
+                      {e.superada ? (
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900">
+                          ✅ Superada
+                        </span>
+                      ) : e.intentos >= 10 ? (
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-900">
+                          ⛔ 10/10 agotados
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900">
+                          ⏳ Entrenando
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
