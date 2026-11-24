@@ -100,16 +100,43 @@ export default function PanelSeguimientoClase({
 
   useEffect(() => {
     if (!codigoActividad) return;
-    void cargarDatos();
+    let activo = true;
 
+    const sincronizar = async () => {
+      const [{ data: dataEntregas, error }, { data: dataAct }] = await Promise.all([
+        supabase
+          .from("entregas")
+          .select(
+            "id, nombre_alumno, intentos, nivel_logro, nivel_comprension, nivel_expresion, superada, ultima_evaluacion, updated_at"
+          )
+          .eq("actividad_codigo", codigoActividad)
+          .order("updated_at", { ascending: false }),
+        supabase
+          .from("actividades")
+          .select("config_mision")
+          .eq("codigo", codigoActividad)
+          .maybeSingle(),
+      ]);
+
+      if (!activo) return;
+      if (!error && dataEntregas) {
+        setEntregas(dataEntregas as EntregaAlumno[]);
+      }
+      if (dataAct?.config_mision) {
+        setMision(dataAct.config_mision as ConfigMision);
+      }
+    };
+
+    void sincronizar();
     const intervalo = setInterval(() => {
-      void cargarDatos();
+      void sincronizar();
     }, 10000);
 
     return () => {
+      activo = false;
       clearInterval(intervalo);
     };
-  }, [codigoActividad, cargarDatos]);
+  }, [codigoActividad]);
 
   const copiarEnlace = () => {
     navigator.clipboard.writeText(enlaceAlumno);
