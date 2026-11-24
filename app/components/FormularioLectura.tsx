@@ -23,7 +23,6 @@ async function comprimirAudioEnNavegador(file: File): Promise<Blob> {
     const audioCtx = new AudioCtx();
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    // Re-muestreo a 8 kHz mono (suficiente para voz en Whisper y ~0,9 MB por minuto)
     const targetRate = 8000;
     const numSamples = Math.ceil(audioBuffer.duration * targetRate);
     const offlineCtx = new OfflineAudioContext(1, numSamples, targetRate);
@@ -83,7 +82,6 @@ export default function FormularioLectura({
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [pestanaSubida, setPestanaSubida] = useState<"visor" | "texto">("visor");
 
-  // Estados para Comprensión Oral (Vídeo / Audio)
   const [enlaceOralInput, setEnlaceOralInput] = useState(form.mediaUrl || "");
   const [extrayendoOral, setExtrayendoOral] = useState(false);
   const [pestanaOral, setPestanaOral] = useState<"reproductor" | "transcripcion">("reproductor");
@@ -296,7 +294,7 @@ export default function FormularioLectura({
       onSubmit={onSubmit}
       className="bg-white rounded-2xl shadow-lg shadow-slate-200/70 border border-slate-200/80 p-6 sm:p-8 space-y-6 print:hidden"
     >
-      {/* Selector de Origen: Generar con IA vs Subir documento vs Comprensión Oral */}
+      {/* Selector de Origen */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 bg-slate-100 rounded-xl border border-slate-200/80">
         <button
           type="button"
@@ -777,13 +775,13 @@ export default function FormularioLectura({
 
       <hr className="border-slate-100" />
 
-      {/* Bloque 3: Preguntas de Comprensión */}
+      {/* Bloque 3: Preguntas de Comprensión + Actividad final de resumen */}
       <div>
         <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
           <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">
             3
           </span>
-          Batería de preguntas
+          Batería de preguntas y actividades
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -837,6 +835,57 @@ export default function FormularioLectura({
                 +
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Opción de actividad final: Redacción de resumen */}
+        <div className="mt-4 bg-amber-50/50 border border-amber-200/90 rounded-xl p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(form.incluirResumen)}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    incluirResumen: e.target.checked,
+                    minPalabrasResumen: form.minPalabrasResumen || 60,
+                  })
+                }
+                className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+              />
+              <div>
+                <div className="text-sm font-semibold text-slate-800">
+                  📝 Incluir actividad final: Redacción de resumen
+                </div>
+                <div className="text-xs text-slate-500">
+                  Exige al alumnado redactar una síntesis con un número mínimo de palabras obligatorio
+                </div>
+              </div>
+            </label>
+
+            {form.incluirResumen && (
+              <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg px-3 py-1.5">
+                <label className="text-xs font-bold text-amber-900">
+                  Mínimo obligatorio:
+                </label>
+                <input
+                  type="number"
+                  min={15}
+                  max={500}
+                  step={5}
+                  value={form.minPalabrasResumen ?? 60}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      minPalabrasResumen: Math.max(10, Number(e.target.value) || 0),
+                    })
+                  }
+                  className="w-20 border border-slate-300 rounded-md px-2 py-1 text-sm font-bold text-center text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                />
+                <span className="text-xs font-medium text-slate-600">palabras</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

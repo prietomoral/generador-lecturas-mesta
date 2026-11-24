@@ -22,6 +22,8 @@ export default function GeneradorLectura() {
     saberes: "",
     numLiterales: 3,
     numInferenciales: 2,
+    incluirResumen: false,
+    minPalabrasResumen: 60,
   });
 
   useEffect(() => {
@@ -118,16 +120,28 @@ export default function GeneradorLectura() {
         (form.modoOrigen === "subir" || form.modoOrigen === "oral") &&
         Boolean(form.textoPropio?.trim());
 
-      const resultadoFinal: ResultadoLectura = esContenidoPropio
-        ? {
-            ...data,
-            titulo: form.tituloPropio?.trim() || data.titulo,
-            texto: form.textoPropio!.trim(),
-            ...(form.modoOrigen === "oral" && form.mediaUrl
-              ? { mediaUrl: form.mediaUrl, mediaTipo: form.mediaTipo }
-              : {}),
-          }
-        : data;
+      const minPalabras = form.incluirResumen
+        ? Math.max(10, Number(form.minPalabrasResumen) || 50)
+        : 0;
+
+      const resultadoFinal: ResultadoLectura = {
+        ...data,
+        ...(esContenidoPropio
+          ? {
+              titulo: form.tituloPropio?.trim() || data.titulo,
+              texto: form.textoPropio!.trim(),
+            }
+          : {}),
+        ...(form.modoOrigen === "oral" && form.mediaUrl
+          ? { mediaUrl: form.mediaUrl, mediaTipo: form.mediaTipo }
+          : {}),
+        ...(minPalabras > 0
+          ? {
+              resumen_min_palabras: minPalabras,
+              resumen_modelo: data.resumen_modelo || "",
+            }
+          : {}),
+      };
 
       debeHacerScrollRef.current = true;
       setResultado(resultadoFinal);
@@ -172,6 +186,12 @@ export default function GeneradorLectura() {
         ...data,
         ...(resultado.mediaUrl
           ? { mediaUrl: resultado.mediaUrl, mediaTipo: resultado.mediaTipo }
+          : {}),
+        ...(resultado.resumen_min_palabras && resultado.resumen_min_palabras > 0
+          ? {
+              resumen_min_palabras: resultado.resumen_min_palabras,
+              resumen_modelo: data.resumen_modelo ?? resultado.resumen_modelo ?? "",
+            }
           : {}),
       });
       setAvisoExito(true);
@@ -228,7 +248,7 @@ export default function GeneradorLectura() {
             />
 
             <VentanaCorrector
-              key={`corrector-${resultado.titulo}`}
+              key={`corrector-${resultado.titulo}-${resultado.resumen_min_palabras || 0}`}
               abierta={ventanaCorrectorAbierta}
               onCerrar={() => setVentanaCorrectorAbierta(false)}
               titulo={resultado.titulo}
@@ -239,6 +259,8 @@ export default function GeneradorLectura() {
               mediaTipo={resultado.mediaTipo || null}
               preguntasLiterales={resultado.preguntas_literales || []}
               preguntasInferenciales={resultado.preguntas_inferenciales || []}
+              resumenMinPalabras={resultado.resumen_min_palabras || 0}
+              resumenModelo={resultado.resumen_modelo || ""}
             />
           </>
         )}

@@ -21,6 +21,8 @@ interface Actividad {
   media_tipo?: "youtube" | "video" | "audio" | null;
   preguntas_literales: Pregunta[];
   preguntas_inferenciales: Pregunta[];
+  resumen_min_palabras?: number | null;
+  resumen_modelo?: string | null;
 }
 
 interface CorreccionItem {
@@ -35,6 +37,13 @@ interface ResultadoCorreccion {
   comentario_general: string;
   correcciones_literales: CorreccionItem[];
   correcciones_inferenciales: CorreccionItem[];
+  correccion_resumen?: CorreccionItem | null;
+}
+
+function contarPalabras(texto: string): number {
+  const limpio = (texto || "").trim();
+  if (!limpio) return 0;
+  return limpio.split(/\s+/).filter(Boolean).length;
 }
 
 function VistaAlumnoContenido() {
@@ -44,6 +53,7 @@ function VistaAlumnoContenido() {
   const [actividad, setActividad] = useState<Actividad | null>(null);
   const [respLiterales, setRespLiterales] = useState<string[]>([]);
   const [respInferenciales, setRespInferenciales] = useState<string[]>([]);
+  const [respResumen, setRespResumen] = useState("");
   const [evaluacion, setEvaluacion] = useState<ResultadoCorreccion | null>(null);
   const [intentos, setIntentos] = useState(0);
   const [superada, setSuperada] = useState(false);
@@ -53,6 +63,13 @@ function VistaAlumnoContenido() {
 
   const sinIntentos = intentos >= MAX_INTENTOS && !superada;
   const bloqueado = superada || sinIntentos;
+
+  const minPalabrasResumen = Number(actividad?.resumen_min_palabras) || 0;
+  const requiereResumen = minPalabrasResumen > 0;
+  const palabrasActualesResumen = contarPalabras(respResumen);
+  const resumenCumpleMinimo =
+    !requiereResumen || palabrasActualesResumen >= minPalabrasResumen;
+  const palabrasFaltantes = Math.max(0, minPalabrasResumen - palabrasActualesResumen);
 
   const parrafosTexto = (actividad?.texto || "")
     .replace(/\\n/g, "\n")
@@ -91,12 +108,14 @@ function VistaAlumnoContenido() {
       if (entregaPrevia) {
         setRespLiterales(entregaPrevia.respuestas_literales || []);
         setRespInferenciales(entregaPrevia.respuestas_inferenciales || []);
+        setRespResumen(entregaPrevia.respuesta_resumen || "");
         setEvaluacion(entregaPrevia.ultima_evaluacion || null);
         setIntentos(entregaPrevia.intentos || 0);
         setSuperada(Boolean(entregaPrevia.superada));
       } else {
         setRespLiterales((act.preguntas_literales || []).map(() => ""));
         setRespInferenciales((act.preguntas_inferenciales || []).map(() => ""));
+        setRespResumen("");
       }
     } finally {
       setCargando(false);
@@ -106,9 +125,17 @@ function VistaAlumnoContenido() {
   const enviarIntento = async () => {
     if (!actividad || bloqueado) return;
 
+    if (requiereResumen && !resumenCumpleMinimo) {
+      alert(
+        `El resumen es obligatorio y debe tener al menos ${minPalabrasResumen} palabras (llevas ${palabrasActualesResumen}).`
+      );
+      return;
+    }
+
     const hayRespuesta =
       respLiterales.some((r) => r.trim().length > 0) ||
-      respInferenciales.some((r) => r.trim().length > 0);
+      respInferenciales.some((r) => r.trim().length > 0) ||
+      (requiereResumen && respResumen.trim().length > 0);
 
     if (!hayRespuesta) {
       alert("Escribe tus respuestas antes de pedir ayuda al entrenador.");
@@ -131,6 +158,9 @@ function VistaAlumnoContenido() {
           preguntas_inferenciales: actividad.preguntas_inferenciales,
           respuestasAlumnoLiterales: respLiterales,
           respuestasAlumnoInferenciales: respInferenciales,
+          resumenMinPalabras: minPalabrasResumen,
+          resumenModelo: actividad.resumen_modelo || "",
+          respuestaAlumnoResumen: requiereResumen ? respResumen : undefined,
         }),
       });
 
@@ -150,6 +180,7 @@ function VistaAlumnoContenido() {
           superada: estaSuperada,
           respuestas_literales: respLiterales,
           respuestas_inferenciales: respInferenciales,
+          respuesta_resumen: requiereResumen ? respResumen : null,
           ultima_evaluacion: data,
           updated_at: new Date().toISOString(),
         },
@@ -480,15 +511,92 @@ function VistaAlumnoContenido() {
               );
             })}
 
+            {/* Actividad final: Redacción de resumen obligatoria */}
+            {requiereResumen && (
+              <div className="border-2 border-amber-200 bg-amber-50/30 rounded-xl p-4 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg">
+                    Actividad Final · Redacción de Resumen (Obligatorio)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                        resumenCumpleMinimo
+                          ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                          : "bg-amber-100 text-amber-950 border-amber-300"
+                      }`}
+                    >
+                      {palabrasActualesResumen} / {minPalabrasResumen} palabras{" "}
+                      {resumenCumpleMinimo ? "✓" : `(faltan ${palabrasFaltantes})`}
+                    </span>
+                    {evaluacion?.correccion_resumen && (
+                      <span
+                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                          evaluacion.correccion_resumen.nivel_pregunta
+                        )}`}
+                      >
+                        {evaluacion.correccion_resumen.nivel_pregunta}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <label className="block text-sm font-semibold text-slate-900">
+                  Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
+                  {minPalabrasResumen} palabras):
+                </label>
+
+                <textarea
+                  rows={5}
+                  disabled={bloqueado}
+                  placeholder={`Escribe aquí tu resumen (debes escribir al menos ${minPalabrasResumen} palabras para poder enviarlo)...`}
+                  value={respResumen}
+                  onChange={(e) => setRespResumen(e.target.value)}
+                  className="w-full bg-white border border-amber-300 rounded-lg p-3 text-sm leading-relaxed disabled:bg-slate-100"
+                />
+
+                {!bloqueado && !resumenCumpleMinimo && (
+                  <p className="text-xs font-semibold text-amber-900">
+                    ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
+                    {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar el envío.
+                  </p>
+                )}
+
+                {evaluacion?.correccion_resumen && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <div className="text-xs bg-blue-50/80 border border-blue-200 rounded-lg p-2.5 text-blue-950">
+                      <strong className="block text-blue-800 mb-0.5">
+                        🧭 Pista de comprensión (ideas clave):
+                      </strong>
+                      {evaluacion.correccion_resumen.pista_comprension}
+                    </div>
+                    <div className="text-xs bg-indigo-50/80 border border-indigo-200 rounded-lg p-2.5 text-indigo-950">
+                      <strong className="block text-indigo-800 mb-0.5">
+                        ✍️ Entrenamiento de síntesis y cohesión:
+                      </strong>
+                      {evaluacion.correccion_resumen.consejo_redaccion}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {!bloqueado && (
               <button
                 type="button"
-                disabled={corrigiendo}
+                disabled={corrigiendo || !resumenCumpleMinimo}
+                title={
+                  !resumenCumpleMinimo
+                    ? `Completa el resumen (faltan ${palabrasFaltantes} palabras)`
+                    : undefined
+                }
                 onClick={enviarIntento}
-                className="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 text-white font-bold text-sm transition cursor-pointer"
+                className="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold text-sm transition cursor-pointer"
               >
                 {corrigiendo
                   ? "Analizando comprensión y redacción..."
+                  : !resumenCumpleMinimo
+                  ? `🔒 Completa el resumen (faltan ${palabrasFaltantes} palabras)`
                   : intentos > 0
                   ? `🔄 Revisar mejora (Intento ${intentos + 1} de ${MAX_INTENTOS})`
                   : `🧭 Enviar al entrenador (Intento 1 de ${MAX_INTENTOS})`}

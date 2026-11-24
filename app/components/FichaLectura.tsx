@@ -40,13 +40,20 @@ export default function FichaLectura({
 }: FichaLecturaProps) {
   const [mostrarRespuestas, setMostrarRespuestas] = useState(false);
 
-  // Estado local aislado para editar sin mover el scroll ni re-renderizar al teclear
   const [itemEditando, setItemEditando] = useState<{
     tipo: "literales" | "inferenciales";
     indice: number;
   } | null>(null);
   const [borradorPregunta, setBorradorPregunta] = useState("");
   const [borradorRespuesta, setBorradorRespuesta] = useState("");
+
+  const [editandoResumen, setEditandoResumen] = useState(false);
+  const [borradorMinPalabras, setBorradorMinPalabras] = useState(
+    resultado.resumen_min_palabras || 60
+  );
+  const [borradorResumenModelo, setBorradorResumenModelo] = useState(
+    resultado.resumen_modelo || ""
+  );
 
   const [codigoAula, setCodigoAula] = useState<string | null>(null);
   const [publicando, setPublicando] = useState(false);
@@ -56,6 +63,8 @@ export default function FichaLectura({
   const [instruccion, setInstruccion] = useState("");
   const [historialCambios, setHistorialCambios] = useState<string[]>([]);
 
+  const tieneResumen = (resultado.resumen_min_palabras || 0) > 0;
+
   const parrafosTexto = (resultado.texto || "")
     .replace(/\\n/g, "\n")
     .split(/\r?\n+/)
@@ -63,7 +72,6 @@ export default function FichaLectura({
     .filter(Boolean);
 
   const iniciarEdicion = (tipo: "literales" | "inferenciales", indice: number) => {
-    // Si había otra abierta, guarda primero sus cambios
     if (itemEditando) {
       guardarEdicionActual();
     }
@@ -111,7 +119,6 @@ export default function FichaLectura({
     const clave = tipo === "literales" ? "preguntas_literales" : "preguntas_inferenciales";
     let baseResultado = resultado;
 
-    // Si estaba editando otra, consolidar antes de añadir
     if (itemEditando) {
       const clavePrev =
         itemEditando.tipo === "literales" ? "preguntas_literales" : "preguntas_inferenciales";
@@ -137,8 +144,39 @@ export default function FichaLectura({
     setItemEditando({ tipo, indice: nuevoIndice });
   };
 
+  const activarResumenEnFicha = () => {
+    setBorradorMinPalabras(60);
+    setBorradorResumenModelo(resultado.resumen_modelo || "");
+    onActualizarResultado({
+      ...resultado,
+      resumen_min_palabras: 60,
+      resumen_modelo: resultado.resumen_modelo || "",
+    });
+    setEditandoResumen(true);
+  };
+
+  const guardarEdicionResumen = () => {
+    const minimoValido = Math.max(10, Number(borradorMinPalabras) || 50);
+    onActualizarResultado({
+      ...resultado,
+      resumen_min_palabras: minimoValido,
+      resumen_modelo: borradorResumenModelo,
+    });
+    setEditandoResumen(false);
+  };
+
+  const quitarResumenDeFicha = () => {
+    onActualizarResultado({
+      ...resultado,
+      resumen_min_palabras: 0,
+      resumen_modelo: "",
+    });
+    setEditandoResumen(false);
+  };
+
   const publicarParaClase = async () => {
     if (itemEditando) guardarEdicionActual();
+    if (editandoResumen) guardarEdicionResumen();
 
     const literalesValidas = (resultado.preguntas_literales || []).filter((p) =>
       p.pregunta.trim()
@@ -146,9 +184,16 @@ export default function FichaLectura({
     const inferencialesValidas = (resultado.preguntas_inferenciales || []).filter((p) =>
       p.pregunta.trim()
     );
+    const minPalabrasFinal = editandoResumen
+      ? Math.max(10, Number(borradorMinPalabras) || 50)
+      : resultado.resumen_min_palabras || 0;
 
-    if (literalesValidas.length === 0 && inferencialesValidas.length === 0) {
-      alert("Añade al menos una pregunta con enunciado antes de compartir con la clase.");
+    if (
+      literalesValidas.length === 0 &&
+      inferencialesValidas.length === 0 &&
+      minPalabrasFinal === 0
+    ) {
+      alert("Añade al menos una pregunta o activa el resumen antes de compartir con la clase.");
       return;
     }
 
@@ -164,6 +209,10 @@ export default function FichaLectura({
         media_tipo: resultado.mediaTipo || null,
         preguntas_literales: literalesValidas,
         preguntas_inferenciales: inferencialesValidas,
+        resumen_min_palabras: minPalabrasFinal,
+        resumen_modelo: editandoResumen
+          ? borradorResumenModelo
+          : resultado.resumen_modelo || null,
       });
 
       if (error) {
@@ -187,6 +236,7 @@ export default function FichaLectura({
     if (!textoInstruccion || refinando) return;
 
     setItemEditando(null);
+    setEditandoResumen(false);
     await onRefinarResultado(textoInstruccion);
     setHistorialCambios((prev) => [...prev, textoInstruccion]);
     setInstruccion("");
@@ -409,6 +459,7 @@ export default function FichaLectura({
             type="button"
             onClick={() => {
               if (itemEditando) guardarEdicionActual();
+              if (editandoResumen) guardarEdicionResumen();
               onAbrirCorrector();
             }}
             className="text-sm bg-indigo-700 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition cursor-pointer"
@@ -428,6 +479,7 @@ export default function FichaLectura({
             type="button"
             onClick={() => {
               if (itemEditando) guardarEdicionActual();
+              if (editandoResumen) guardarEdicionResumen();
               setTimeout(() => window.print(), 50);
             }}
             className="text-sm bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-semibold shadow-sm transition cursor-pointer"
@@ -552,7 +604,7 @@ export default function FichaLectura({
             {resultado.titulo}
           </h2>
 
-          {/* Selector entre Recurso Original y Texto (en oral solo visible con Ver Solucionario) */}
+          {/* Selector entre Recurso Original y Texto */}
           {mostrarSelectorVista && (
             <div className="flex justify-center mb-4 print:hidden">
               <div className="inline-flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
@@ -586,7 +638,7 @@ export default function FichaLectura({
             </div>
           )}
 
-          {/* Reproductor Multimedia (Comprensión Oral) */}
+          {/* Reproductor Multimedia */}
           {resultado.mediaUrl && (!mostrarRespuestas || vistaDocumento === "original") && (
             <div className="mb-4 print:hidden">
               {resultado.mediaTipo === "youtube" && (
@@ -615,7 +667,7 @@ export default function FichaLectura({
             </div>
           )}
 
-          {/* Visor PDF Original (si no es multimedia) */}
+          {/* Visor PDF Original */}
           {!resultado.mediaUrl && pdfPreviewUrl && vistaDocumento === "original" && (
             <div className="w-full h-[540px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner mb-4 print:hidden">
               <iframe
@@ -662,6 +714,135 @@ export default function FichaLectura({
           </h3>
           {renderBloquePreguntas("inferenciales", resultado.preguntas_inferenciales || [])}
         </div>
+
+        {/* SECCIÓN 3: ACTIVIDAD FINAL DE RESUMEN */}
+        {tieneResumen ? (
+          <div className="space-y-3 pt-6 break-inside-avoid">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-amber-800 bg-amber-100/80 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
+                  3. Redacción de Resumen
+                </h3>
+                <span className="text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full print:border-gray-500 print:text-black">
+                  Mínimo obligatorio: {resultado.resumen_min_palabras} palabras
+                </span>
+              </div>
+
+              {!editandoResumen && (
+                <div className="flex items-center gap-1 print:hidden">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBorradorMinPalabras(resultado.resumen_min_palabras || 60);
+                      setBorradorResumenModelo(resultado.resumen_modelo || "");
+                      setEditandoResumen(true);
+                    }}
+                    className="text-xs font-semibold text-slate-600 hover:text-amber-800 bg-white border border-slate-200 hover:border-amber-300 px-2.5 py-1 rounded-lg cursor-pointer"
+                  >
+                    ✏️ Configurar resumen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={quitarResumenDeFicha}
+                    title="Quitar actividad de resumen"
+                    className="text-xs font-semibold text-slate-500 hover:text-rose-700 bg-white border border-slate-200 hover:border-rose-300 px-2 py-1 rounded-lg cursor-pointer"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {editandoResumen ? (
+              <div className="border-2 border-amber-300 bg-amber-50/40 rounded-xl p-4 space-y-3 print:hidden">
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="text-xs font-bold text-slate-800">
+                    Número mínimo de palabras obligatorio:
+                  </label>
+                  <input
+                    type="number"
+                    min={10}
+                    max={500}
+                    step={5}
+                    value={borradorMinPalabras}
+                    onChange={(e) => setBorradorMinPalabras(Number(e.target.value))}
+                    className="w-24 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm font-bold text-center text-slate-900"
+                  />
+                  <span className="text-xs text-slate-600">palabras</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-emerald-800 mb-1">
+                    Resumen modelo / ideas clave esperadas (para solucionario y entrenador IA)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Escribe el resumen de referencia o las ideas principales que debe recoger el alumnado..."
+                    value={borradorResumenModelo}
+                    onChange={(e) => setBorradorResumenModelo(e.target.value)}
+                    className="w-full bg-white border border-emerald-200 rounded-lg p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={quitarResumenDeFicha}
+                    className="text-xs font-semibold text-rose-600 hover:text-rose-800 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 cursor-pointer"
+                  >
+                    🗑️ Quitar actividad de resumen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={guardarEdicionResumen}
+                    className="text-xs font-bold text-white bg-amber-700 hover:bg-amber-600 px-4 py-1.5 rounded-lg shadow-xs cursor-pointer"
+                  >
+                    ✓ Guardar configuración
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="font-medium text-slate-900">
+                  Redacta con tus propias palabras un resumen completo que recoja las ideas principales del texto (extensión mínima obligatoria:{" "}
+                  <strong>{resultado.resumen_min_palabras} palabras</strong>).
+                </p>
+
+                {mostrarRespuestas && (
+                  <div className="text-emerald-900 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:hidden">
+                    <strong>Resumen modelo de referencia:</strong>{" "}
+                    {resultado.resumen_modelo ? (
+                      resultado.resumen_modelo
+                    ) : (
+                      <span className="italic text-emerald-700/80">
+                        El entrenador IA evaluará la fidelidad a las ideas principales del texto y comprobará el mínimo de {resultado.resumen_min_palabras} palabras.
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="hidden print:block mt-4 space-y-5">
+                  <div className="border-b border-gray-400 h-4" />
+                  <div className="border-b border-gray-400 h-4" />
+                  <div className="border-b border-gray-400 h-4" />
+                  <div className="border-b border-gray-400 h-4" />
+                  <div className="border-b border-gray-400 h-4" />
+                  <div className="border-b border-gray-400 h-4" />
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="pt-4 print:hidden">
+            <button
+              type="button"
+              onClick={activarResumenEnFicha}
+              className="text-xs font-bold px-3.5 py-2 rounded-lg border bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-200 transition cursor-pointer"
+            >
+              + Añadir actividad final: Redacción de resumen
+            </button>
+          </div>
+        )}
       </div>
 
       {/* BLOQUE 2 (SOLO PDF): SOLUCIONARIO EN HOJA APARTE */}
@@ -704,7 +885,7 @@ export default function FichaLectura({
         )}
 
         {resultado.preguntas_inferenciales?.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-3 mb-6">
             <h3 className="text-base font-bold uppercase tracking-wider text-black">
               2. Soluciones — Comprensión Inferencial
             </h3>
@@ -718,6 +899,19 @@ export default function FichaLectura({
                 </li>
               ))}
             </ol>
+          </div>
+        )}
+
+        {tieneResumen && (
+          <div className="space-y-2 break-inside-avoid">
+            <h3 className="text-base font-bold uppercase tracking-wider text-black">
+              3. Criterios — Redacción de Resumen (Mínimo {resultado.resumen_min_palabras} palabras)
+            </h3>
+            <p className="text-sm text-gray-800">
+              {resultado.resumen_modelo
+                ? resultado.resumen_modelo
+                : `Debe recoger las ideas principales del texto con cohesión y vocabulario propio, alcanzando al menos ${resultado.resumen_min_palabras} palabras.`}
+            </p>
           </div>
         )}
       </div>

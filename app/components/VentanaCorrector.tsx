@@ -15,6 +15,7 @@ interface ResultadoCorreccion {
   comentario_general: string;
   correcciones_literales: CorreccionItem[];
   correcciones_inferenciales: CorreccionItem[];
+  correccion_resumen?: CorreccionItem | null;
 }
 
 interface VentanaCorrectorProps {
@@ -28,6 +29,14 @@ interface VentanaCorrectorProps {
   mediaTipo?: MediaTipo | null;
   preguntasLiterales: Pregunta[];
   preguntasInferenciales: Pregunta[];
+  resumenMinPalabras?: number;
+  resumenModelo?: string;
+}
+
+function contarPalabras(texto: string): number {
+  const limpio = texto.trim();
+  if (!limpio) return 0;
+  return limpio.split(/\s+/).filter(Boolean).length;
 }
 
 export default function VentanaCorrector({
@@ -41,6 +50,8 @@ export default function VentanaCorrector({
   mediaTipo,
   preguntasLiterales,
   preguntasInferenciales,
+  resumenMinPalabras = 0,
+  resumenModelo = "",
 }: VentanaCorrectorProps) {
   const [respLiterales, setRespLiterales] = useState<string[]>(() =>
     preguntasLiterales.map(() => "")
@@ -48,11 +59,18 @@ export default function VentanaCorrector({
   const [respInferenciales, setRespInferenciales] = useState<string[]>(() =>
     preguntasInferenciales.map(() => "")
   );
+  const [respResumen, setRespResumen] = useState("");
   const [corrigiendo, setCorrigiendo] = useState(false);
   const [evaluacion, setEvaluacion] = useState<ResultadoCorreccion | null>(null);
   const [vistaLectura, setVistaLectura] = useState<"original" | "texto">("original");
 
   if (!abierta) return null;
+
+  const requiereResumen = resumenMinPalabras > 0;
+  const palabrasActualesResumen = contarPalabras(respResumen);
+  const resumenCumpleMinimo =
+    !requiereResumen || palabrasActualesResumen >= resumenMinPalabras;
+  const palabrasFaltantes = Math.max(0, resumenMinPalabras - palabrasActualesResumen);
 
   const parrafosTexto = (texto || "")
     .replace(/\\n/g, "\n")
@@ -61,9 +79,17 @@ export default function VentanaCorrector({
     .filter(Boolean);
 
   const manejarCorreccion = async () => {
+    if (requiereResumen && !resumenCumpleMinimo) {
+      alert(
+        `El resumen es obligatorio y debe tener al menos ${resumenMinPalabras} palabras (llevas ${palabrasActualesResumen}).`
+      );
+      return;
+    }
+
     const hayAlgunaRespuesta =
       respLiterales.some((r) => r.trim().length > 0) ||
-      respInferenciales.some((r) => r.trim().length > 0);
+      respInferenciales.some((r) => r.trim().length > 0) ||
+      (requiereResumen && respResumen.trim().length > 0);
 
     if (!hayAlgunaRespuesta) {
       alert("Escribe al menos una respuesta antes de pedir ayuda al entrenador.");
@@ -86,6 +112,9 @@ export default function VentanaCorrector({
           preguntas_inferenciales: preguntasInferenciales,
           respuestasAlumnoLiterales: respLiterales,
           respuestasAlumnoInferenciales: respInferenciales,
+          resumenMinPalabras,
+          resumenModelo,
+          respuestaAlumnoResumen: requiereResumen ? respResumen : undefined,
         }),
       });
 
@@ -146,9 +175,9 @@ export default function VentanaCorrector({
           </button>
         </div>
 
-        {/* Cuerpo dividido en 2 columnas: Recurso/Texto a la izquierda, Preguntas a la derecha */}
+        {/* Cuerpo dividido en 2 columnas */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-          {/* Columna Izquierda: Reproductor (si es oral), PDF original o texto */}
+          {/* Columna Izquierda */}
           <div className="lg:col-span-5 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200 p-5 overflow-y-auto flex flex-col">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -210,7 +239,7 @@ export default function VentanaCorrector({
                   </div>
                 )}
                 <p className="text-xs text-slate-500">
-                  Escucha o visualiza el fragmento tantas veces como necesites y responde a las preguntas de la derecha.
+                  Escucha o visualiza el fragmento tantas veces como necesites y responde a las actividades de la derecha.
                 </p>
               </div>
             ) : pdfPreviewUrl && vistaLectura === "original" ? (
@@ -232,7 +261,7 @@ export default function VentanaCorrector({
             )}
           </div>
 
-          {/* Columna Derecha: Respuestas y Entrenamiento IA */}
+          {/* Columna Derecha */}
           <div className="lg:col-span-7 p-5 overflow-y-auto space-y-6 bg-white">
             {evaluacion && (
               <div
@@ -369,6 +398,77 @@ export default function VentanaCorrector({
                 })}
               </div>
             )}
+
+            {/* BLOQUE 3: REDACCIÓN DE RESUMEN OBLIGATORIA */}
+            {requiereResumen && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100/80 inline-block px-3 py-1 rounded-lg">
+                    3. Redacción de Resumen (Obligatorio)
+                  </h4>
+                  <span
+                    className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                      resumenCumpleMinimo
+                        ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                        : "bg-amber-100 text-amber-950 border-amber-300"
+                    }`}
+                  >
+                    {palabrasActualesResumen} / {resumenMinPalabras} palabras{" "}
+                    {resumenCumpleMinimo ? "✓" : `(faltan ${palabrasFaltantes})`}
+                  </span>
+                </div>
+
+                <div className="border-2 border-amber-200 rounded-xl p-3.5 space-y-2.5 bg-amber-50/30">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-sm font-semibold text-slate-900">
+                      Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
+                      {resumenMinPalabras} palabras):
+                    </label>
+                    {evaluacion?.correccion_resumen && (
+                      <span
+                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                          evaluacion.correccion_resumen.nivel_pregunta
+                        )}`}
+                      >
+                        {evaluacion.correccion_resumen.nivel_pregunta}
+                      </span>
+                    )}
+                  </div>
+
+                  <textarea
+                    rows={5}
+                    placeholder={`Escribe aquí tu resumen (debes alcanzar al menos ${resumenMinPalabras} palabras para poder enviarlo)...`}
+                    value={respResumen}
+                    onChange={(e) => setRespResumen(e.target.value)}
+                    className="w-full bg-white border border-amber-300 rounded-lg p-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-600"
+                  />
+
+                  {!resumenCumpleMinimo && (
+                    <p className="text-xs font-semibold text-amber-900">
+                      ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
+                      {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar la corrección.
+                    </p>
+                  )}
+
+                  {evaluacion?.correccion_resumen && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      <div className="text-xs bg-blue-50/80 border border-blue-200 rounded-lg p-2.5 text-blue-950">
+                        <strong className="block text-blue-800 mb-0.5">
+                          🧭 Pista de comprensión (ideas clave):
+                        </strong>
+                        {evaluacion.correccion_resumen.pista_comprension}
+                      </div>
+                      <div className="text-xs bg-indigo-50/80 border border-indigo-200 rounded-lg p-2.5 text-indigo-950">
+                        <strong className="block text-indigo-800 mb-0.5">
+                          ✍️ Entrenamiento de síntesis y cohesión:
+                        </strong>
+                        {evaluacion.correccion_resumen.consejo_redaccion}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -380,6 +480,7 @@ export default function VentanaCorrector({
             onClick={() => {
               setRespLiterales(preguntasLiterales.map(() => ""));
               setRespInferenciales(preguntasInferenciales.map(() => ""));
+              setRespResumen("");
               setEvaluacion(null);
             }}
             className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
@@ -397,11 +498,20 @@ export default function VentanaCorrector({
             </button>
             <button
               type="button"
-              disabled={corrigiendo}
+              disabled={corrigiendo || !resumenCumpleMinimo}
               onClick={manejarCorreccion}
-              className="px-6 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 text-white text-sm font-bold shadow-sm transition cursor-pointer"
+              title={
+                !resumenCumpleMinimo
+                  ? `Completa el resumen (faltan ${palabrasFaltantes} palabras)`
+                  : undefined
+              }
+              className="px-6 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white text-sm font-bold shadow-sm transition cursor-pointer"
             >
-              {corrigiendo ? "Analizando..." : "🧭 Probar entrenador IA"}
+              {corrigiendo
+                ? "Analizando..."
+                : !resumenCumpleMinimo
+                ? `🔒 Faltan ${palabrasFaltantes} pal. en el resumen`
+                : "🧭 Probar entrenador IA"}
             </button>
           </div>
         </div>

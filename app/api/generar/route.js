@@ -32,6 +32,7 @@ const ESQUEMA_LECTURA = {
         required: ["pregunta", "respuesta"],
       },
     },
+    resumen_modelo: { type: Type.STRING },
   },
   required: ["titulo", "texto", "preguntas_literales", "preguntas_inferenciales"],
 };
@@ -39,7 +40,7 @@ const ESQUEMA_LECTURA = {
 function normalizarParrafos(texto) {
   if (!texto || typeof texto !== "string") return "";
   return texto
-    .replace(/\\n/g, "\n") // Convierte secuencias literales "\n" en saltos reales
+    .replace(/\\n/g, "\n")
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -158,7 +159,7 @@ async function generarConGroq(prompt) {
         body: JSON.stringify({
           model: modeloElegido,
           temperature: 0.7,
-          max_tokens: 2200,
+          max_tokens: 2400,
           response_format: { type: "json_object" },
           messages: [
             {
@@ -168,7 +169,8 @@ async function generarConGroq(prompt) {
   "titulo": "string",
   "texto": "string (organizado en varios párrafos separados por \\n\\n)",
   "preguntas_literales": [{ "pregunta": "string", "respuesta": "string" }],
-  "preguntas_inferenciales": [{ "pregunta": "string", "respuesta": "string" }]
+  "preguntas_inferenciales": [{ "pregunta": "string", "respuesta": "string" }],
+  "resumen_modelo": "string (opcional, si se solicita resumen)"
 }`,
             },
             { role: "user", content: prompt },
@@ -221,6 +223,17 @@ export async function POST(request) {
         ? datos.tituloPropio.trim()
         : "";
 
+    const minPalabrasResumen = esRefinamiento
+      ? Number(datos.resultadoActual?.resumen_min_palabras) || 0
+      : datos.incluirResumen
+      ? Math.max(10, Number(datos.minPalabrasResumen) || 60)
+      : 0;
+
+    const instruccionResumen =
+      minPalabrasResumen > 0
+        ? `\n- Además, genera en el campo "resumen_modelo" un resumen modelo completo y bien cohesionado en español de España que recoja las ideas principales del contenido y tenga al menos ${minPalabrasResumen} palabras.`
+        : "";
+
     let prompt = "";
 
     if (esRefinamiento) {
@@ -238,9 +251,15 @@ INSTRUCCIÓN DE AJUSTE DEL DOCENTE:
 REGLAS ESTRICTAS DE EDICIÓN:
 1. Aplica ÚNICAMENTE los cambios solicitados por el docente en su instrucción (tono, extensión, vocabulario, enfoque de algún párrafo o ajuste en las preguntas).
 2. Conserva intacto todo lo que el docente no haya pedido cambiar.
-3. Si modificas el texto, asegúrate de que las respuestas modelo de las preguntas literales e inferenciales sigan siendo 100% coherentes con el nuevo texto.
+3. Si modificas el texto, asegúrate de que las respuestas modelo de las preguntas literales e inferenciales${
+        minPalabrasResumen > 0
+          ? ` y el "resumen_modelo" (con un mínimo de ${minPalabrasResumen} palabras)`
+          : ""
+      } sigan siendo 100% coherentes con el nuevo texto.
 4. Mantén el texto dividido en párrafos claros separados por doble salto de línea (\\n\\n).
-5. Devuelve el objeto JSON completo actualizado con la misma estructura exacta ("titulo", "texto", "preguntas_literales", "preguntas_inferenciales").
+5. Devuelve el objeto JSON completo actualizado con la misma estructura exacta ("titulo", "texto", "preguntas_literales", "preguntas_inferenciales"${
+        minPalabrasResumen > 0 ? `, "resumen_modelo"` : ""
+      }).
 `.trim();
     } else if (esTextoSubido) {
       const etiquetaFuente = esModoOral
@@ -258,7 +277,7 @@ REGLAS ESTRICTAS:
           ? `Usa exactamente este título: "${tituloOriginal}".`
           : "Propón un título breve y adecuado al contenido."
       }
-3. Elabora exactamente ${datos.numLiterales} preguntas literales (cuya respuesta aparezca explícitamente en el ${esModoOral ? "vídeo/audio" : "texto"} proporcionado) y ${datos.numInferenciales} preguntas inferenciales (que requieran deducir o interpretar la intención, tono, causas o conclusiones a partir de lo escuchado/leído), junto con su respuesta modelo en español de España.
+3. Elabora exactamente ${datos.numLiterales} preguntas literales (cuya respuesta aparezca explícitamente en el ${esModoOral ? "vídeo/audio" : "texto"} proporcionado) y ${datos.numInferenciales} preguntas inferenciales (que requieran deducir o interpretar la intención, tono, causas o conclusiones a partir de lo escuchado/leído), junto con su respuesta modelo en español de España.${instruccionResumen}
 
 --- INICIO DEL CONTENIDO PROPORCIONADO ---
 ${textoOriginal}
@@ -279,7 +298,7 @@ REGLAS DE ESTRUCTURA Y PÁRRAFOS:
 - Separa cada párrafo usando obligatoriamente un doble salto de línea (\\n\\n). Nunca escribas el texto como un único bloque continuo.
 
 Genera exactamente ${datos.numLiterales} preguntas literales (respuesta explícita en el texto) 
-y ${datos.numInferenciales} preguntas inferenciales (requieren deducción).
+y ${datos.numInferenciales} preguntas inferenciales (requieren deducción).${instruccionResumen}
 `.trim();
     }
 
@@ -297,6 +316,12 @@ y ${datos.numInferenciales} preguntas inferenciales (requieren deducción).
         ...(esModoOral && datos.mediaUrl
           ? { mediaUrl: datos.mediaUrl, mediaTipo: datos.mediaTipo }
           : {}),
+        ...(minPalabrasResumen > 0
+          ? {
+              resumen_min_palabras: minPalabrasResumen,
+              resumen_modelo: resultado.resumen_modelo || "",
+            }
+          : {}),
       };
     } else {
       resultado = {
@@ -306,6 +331,13 @@ y ${datos.numInferenciales} preguntas inferenciales (requieren deducción).
           ? {
               mediaUrl: datos.resultadoActual.mediaUrl,
               mediaTipo: datos.resultadoActual.mediaTipo,
+            }
+          : {}),
+        ...(minPalabrasResumen > 0
+          ? {
+              resumen_min_palabras: minPalabrasResumen,
+              resumen_modelo:
+                resultado.resumen_modelo ?? datos.resultadoActual?.resumen_modelo ?? "",
             }
           : {}),
       };

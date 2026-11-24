@@ -12,6 +12,8 @@ export interface ResultadoLectura {
   preguntas_inferenciales: Pregunta[];
   mediaUrl?: string;
   mediaTipo?: MediaTipo;
+  resumen_min_palabras?: number;
+  resumen_modelo?: string;
 }
 
 export interface FormLectura {
@@ -29,6 +31,8 @@ export interface FormLectura {
   saberes: string;
   numLiterales: number;
   numInferenciales: number;
+  incluirResumen?: boolean;
+  minPalabrasResumen?: number;
 }
 
 export const TEMAS_BASE = [
