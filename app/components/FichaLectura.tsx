@@ -10,6 +10,10 @@ interface FichaLecturaProps {
   edad: string;
   pdfPreviewUrl?: string | null;
   avisoExito: boolean;
+  docenteId?: string | null;
+  docenteEmail?: string | null;
+  codigoInicial?: string | null;
+  onActividadGuardada?: (codigo: string) => void;
   onCerrarAviso: () => void;
   onAbrirCorrector: () => void;
   onRefinarResultado: (instruccion: string) => Promise<void>;
@@ -31,6 +35,10 @@ export default function FichaLectura({
   edad,
   pdfPreviewUrl,
   avisoExito,
+  docenteId,
+  docenteEmail,
+  codigoInicial = null,
+  onActividadGuardada,
   onCerrarAviso,
   onAbrirCorrector,
   onRefinarResultado,
@@ -55,7 +63,7 @@ export default function FichaLectura({
     resultado.resumen_modelo || ""
   );
 
-  const [codigoAula, setCodigoAula] = useState<string | null>(null);
+  const [codigoGeneradoLocal, setCodigoGeneradoLocal] = useState<string | null>(null);
   const [publicando, setPublicando] = useState(false);
   const [vistaDocumento, setVistaDocumento] = useState<"original" | "texto">("original");
 
@@ -63,8 +71,9 @@ export default function FichaLectura({
   const [instruccion, setInstruccion] = useState("");
   const [historialCambios, setHistorialCambios] = useState<string[]>([]);
 
+  const codigoAula = codigoInicial ?? codigoGeneradoLocal;
   const tieneResumen = (resultado.resumen_min_palabras || 0) > 0;
-  const bloqueoSecuencial = resultado.bloqueo_secuencial ?? true;
+  const bloqueoSecuencial = resultado.bloqueo_secuencial ?? false;
 
   const parrafosTexto = (resultado.texto || "")
     .replace(/\\n/g, "\n")
@@ -194,7 +203,7 @@ export default function FichaLectura({
       inferencialesValidas.length === 0 &&
       minPalabrasFinal === 0
     ) {
-      alert("Añade al menos una pregunta o activa el resumen antes de compartir con la clase.");
+      alert("Añade al menos una pregunta o activa el resumen antes de guardar y compartir.");
       return;
     }
 
@@ -218,18 +227,21 @@ export default function FichaLectura({
           ? borradorResumenModelo
           : resultado.resumen_modelo || null,
         bloqueo_secuencial: bloqueoSecuencial,
+        docente_id: docenteId || null,
+        docente_email: docenteEmail || null,
       });
 
       if (error) {
         throw new Error(error.message);
       }
 
-      setCodigoAula(codigoGenerado);
+      setCodigoGeneradoLocal(codigoGenerado);
+      onActividadGuardada?.(codigoGenerado);
       const urlAlumno = `${window.location.origin}/alumno?codigo=${codigoGenerado}`;
       navigator.clipboard?.writeText(urlAlumno);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al publicar la actividad.";
-      alert("No se pudo publicar en Supabase: " + msg);
+      const msg = err instanceof Error ? err.message : "Error al guardar la actividad.";
+      alert("No se pudo guardar en Supabase: " + msg);
     } finally {
       setPublicando(false);
     }
@@ -242,6 +254,7 @@ export default function FichaLectura({
 
     setItemEditando(null);
     setEditandoResumen(false);
+    setCodigoGeneradoLocal(null);
     await onRefinarResultado(textoInstruccion);
     setHistorialCambios((prev) => [...prev, textoInstruccion]);
     setInstruccion("");
@@ -407,7 +420,7 @@ export default function FichaLectura({
               ✓
             </span>
             <div className="text-sm">
-              <strong>¡Actividad lista!</strong> Puedes editar cualquier pregunta pulsando <strong>✏️ Editar</strong> o añadir las tuyas propias debajo de cada bloque.
+              <strong>¡Actividad lista!</strong> Puedes editar cualquier pregunta pulsando <strong>✏️ Editar</strong> o guardarla en tu biblioteca con <strong>📢 Guardar y compartir</strong>.
             </div>
           </div>
           <button
@@ -478,7 +491,11 @@ export default function FichaLectura({
               onClick={publicarParaClase}
               className="text-sm bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition cursor-pointer"
             >
-              {publicando ? "Generando código..." : "📢 Compartir con la clase"}
+              {publicando
+                ? "Guardando..."
+                : docenteId
+                ? "📢 Guardar en biblioteca y compartir"
+                : "📢 Compartir con la clase"}
             </button>
           )}
 

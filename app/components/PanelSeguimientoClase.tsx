@@ -46,7 +46,7 @@ interface PanelSeguimientoClaseProps {
 export default function PanelSeguimientoClase({
   codigoActividad,
   tituloActividad,
-  bloqueoSecuencial = true,
+  bloqueoSecuencial = false,
 }: PanelSeguimientoClaseProps) {
   const [entregas, setEntregas] = useState<EntregaAlumno[]>([]);
   const [cargando, setCargando] = useState(false);

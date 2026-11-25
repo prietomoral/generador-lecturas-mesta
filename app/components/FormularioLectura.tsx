@@ -87,7 +87,7 @@ export default function FormularioLectura({
   const [pestanaOral, setPestanaOral] = useState<"reproductor" | "transcripcion">("reproductor");
 
   const modo = form.modoOrigen || "generar";
-  const bloqueoActivo = form.bloqueo_secuencial ?? true;
+  const bloqueoActivo = form.bloqueo_secuencial ?? false;
 
   useEffect(() => {
     return () => {

@@ -80,7 +80,7 @@ export default function VentanaCorrector({
   preguntasInferenciales,
   resumenMinPalabras = 0,
   resumenModelo = "",
-  bloqueoSecuencial = true,
+  bloqueoSecuencial = false,
 }: VentanaCorrectorProps) {
   const [respLiterales, setRespLiterales] = useState<string[]>(() =>
     preguntasLiterales.map(() => "")
