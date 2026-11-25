@@ -2,13 +2,6 @@
 
 import React, { useState } from "react";
 import { MediaTipo, Pregunta } from "../types/lectura";
-import { EstadoGamificacion } from "../types/gamificacion";
-import {
-  actualizarGamificacionTrasEvaluacion,
-  crearEstadoGamificacionInicial,
-} from "../lib/motorGamificacion";
-import PanelGamificacionAlumno from "./PanelGamificacionAlumno";
-import RutaEscudoDual from "./RutaEscudoDual";
 
 interface CorreccionItem {
   nivel_comprension: string;
@@ -46,15 +39,9 @@ interface VentanaCorrectorProps {
 }
 
 type PasoSecuencial =
-  | { tipo: "literal"; indice: number; pregunta: Pregunta; etiqueta: string; estacionId: string }
-  | {
-      tipo: "inferencial";
-      indice: number;
-      pregunta: Pregunta;
-      etiqueta: string;
-      estacionId: string;
-    }
-  | { tipo: "resumen"; etiqueta: string; estacionId: string };
+  | { tipo: "literal"; indice: number; pregunta: Pregunta; etiqueta: string }
+  | { tipo: "inferencial"; indice: number; pregunta: Pregunta; etiqueta: string }
+  | { tipo: "resumen"; etiqueta: string };
 
 const NIVELES_ESCALA = [
   "No conseguido",
@@ -107,20 +94,13 @@ export default function VentanaCorrector({
   const [vistaLectura, setVistaLectura] = useState<"original" | "texto">("original");
   const [avisoPegado, setAvisoPegado] = useState<string | null>(null);
 
+  // Cuando bloqueoSecuencial es true, se fuerza el modo paso a paso bloqueado; si es false, empieza en vista libre
   const [modoSecuencial, setModoSecuencial] = useState(bloqueoSecuencial);
   const [pasoActual, setPasoActual] = useState(0);
 
-  const requiereResumen = resumenMinPalabras > 0;
-  const [gamificacion, setGamificacion] = useState<EstadoGamificacion>(() =>
-    crearEstadoGamificacionInicial(
-      preguntasLiterales.length,
-      preguntasInferenciales.length,
-      requiereResumen
-    )
-  );
-
   if (!abierta) return null;
 
+  const requiereResumen = resumenMinPalabras > 0;
   const palabrasActualesResumen = contarPalabras(respResumen);
   const resumenCumpleMinimo =
     !requiereResumen || palabrasActualesResumen >= resumenMinPalabras;
@@ -132,23 +112,15 @@ export default function VentanaCorrector({
       indice: i,
       pregunta: p,
       etiqueta: `Comprensión Literal · Pregunta ${i + 1} de ${preguntasLiterales.length}`,
-      estacionId: `L-${i}`,
     })),
     ...preguntasInferenciales.map((p, i) => ({
       tipo: "inferencial" as const,
       indice: i,
       pregunta: p,
       etiqueta: `Comprensión Inferencial · Pregunta ${i + 1} de ${preguntasInferenciales.length}`,
-      estacionId: `I-${i}`,
     })),
     ...(requiereResumen
-      ? [
-          {
-            tipo: "resumen" as const,
-            etiqueta: "Actividad Final · Redacción de Resumen",
-            estacionId: "RES-0",
-          },
-        ]
+      ? [{ tipo: "resumen" as const, etiqueta: "Actividad Final · Redacción de Resumen" }]
       : []),
   ];
 
@@ -287,66 +259,42 @@ export default function VentanaCorrector({
       }
 
       if (modoSecuencial && pasoActivo) {
-        const base: ResultadoCorreccion = evaluacion || {
-          nivel_global: data.nivel_global,
-          nivel_comprension_global: data.nivel_comprension_global,
-          nivel_expresion_global: data.nivel_expresion_global,
-          comentario_general: data.comentario_general,
-          correcciones_literales: [],
-          correcciones_inferenciales: [],
-          correccion_resumen: null,
-        };
+        setEvaluacion((prev) => {
+          const base: ResultadoCorreccion = prev || {
+            nivel_global: data.nivel_global,
+            nivel_comprension_global: data.nivel_comprension_global,
+            nivel_expresion_global: data.nivel_expresion_global,
+            comentario_general: data.comentario_general,
+            correcciones_literales: [],
+            correcciones_inferenciales: [],
+            correccion_resumen: null,
+          };
 
-        const nuevasLit = [...(base.correcciones_literales || [])];
-        const nuevasInf = [...(base.correcciones_inferenciales || [])];
-        let nuevoRes = base.correccion_resumen || null;
+          const nuevasLit = [...(base.correcciones_literales || [])];
+          const nuevasInf = [...(base.correcciones_inferenciales || [])];
+          let nuevoRes = base.correccion_resumen || null;
 
-        if (pasoActivo.tipo === "literal" && data.correcciones_literales?.[0]) {
-          nuevasLit[pasoActivo.indice] = data.correcciones_literales[0];
-        } else if (pasoActivo.tipo === "inferencial" && data.correcciones_inferenciales?.[0]) {
-          nuevasInf[pasoActivo.indice] = data.correcciones_inferenciales[0];
-        } else if (pasoActivo.tipo === "resumen" && data.correccion_resumen) {
-          nuevoRes = data.correccion_resumen;
-        }
+          if (pasoActivo.tipo === "literal" && data.correcciones_literales?.[0]) {
+            nuevasLit[pasoActivo.indice] = data.correcciones_literales[0];
+          } else if (pasoActivo.tipo === "inferencial" && data.correcciones_inferenciales?.[0]) {
+            nuevasInf[pasoActivo.indice] = data.correcciones_inferenciales[0];
+          } else if (pasoActivo.tipo === "resumen" && data.correccion_resumen) {
+            nuevoRes = data.correccion_resumen;
+          }
 
-        setEvaluacion({
-          ...base,
-          nivel_global: data.nivel_global,
-          nivel_comprension_global: data.nivel_comprension_global,
-          nivel_expresion_global: data.nivel_expresion_global,
-          comentario_general: data.comentario_general,
-          correcciones_literales: nuevasLit,
-          correcciones_inferenciales: nuevasInf,
-          correccion_resumen: nuevoRes,
+          return {
+            ...base,
+            nivel_global: data.nivel_global,
+            nivel_comprension_global: data.nivel_comprension_global,
+            nivel_expresion_global: data.nivel_expresion_global,
+            comentario_general: data.comentario_general,
+            correcciones_literales: nuevasLit,
+            correcciones_inferenciales: nuevasInf,
+            correccion_resumen: nuevoRes,
+          };
         });
-
-        setGamificacion((prevGamif) =>
-          actualizarGamificacionTrasEvaluacion({
-            estadoAnterior: prevGamif,
-            estacionIdEvaluada: pasoActivo.estacionId,
-            esActividadOral: Boolean(mediaUrl),
-            correccionesLiterales: nuevasLit,
-            correccionesInferenciales: nuevasInf,
-            correccionResumen: nuevoRes,
-            numLiterales: preguntasLiterales.length,
-            numInferenciales: preguntasInferenciales.length,
-            tieneResumen: requiereResumen,
-          })
-        );
       } else {
         setEvaluacion(data);
-        setGamificacion((prevGamif) =>
-          actualizarGamificacionTrasEvaluacion({
-            estadoAnterior: prevGamif,
-            esActividadOral: Boolean(mediaUrl),
-            correccionesLiterales: data.correcciones_literales || [],
-            correccionesInferenciales: data.correcciones_inferenciales || [],
-            correccionResumen: data.correccion_resumen || null,
-            numLiterales: preguntasLiterales.length,
-            numInferenciales: preguntasInferenciales.length,
-            tieneResumen: requiereResumen,
-          })
-        );
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error inesperado al analizar.";
@@ -589,19 +537,7 @@ export default function VentanaCorrector({
           </div>
 
           {/* Columna Derecha */}
-          <div className="lg:col-span-7 p-5 overflow-y-auto space-y-5 bg-white">
-            {/* Módulos independientes de Gamificación */}
-            <PanelGamificacionAlumno gamificacion={gamificacion} />
-            <RutaEscudoDual
-              estaciones={gamificacion.estaciones}
-              indiceActivo={indicePasoSeguro}
-              onSeleccionarEstacion={(idx) => {
-                if (!bloqueoSecuencial) {
-                  setPasoActual(idx);
-                }
-              }}
-            />
-
+          <div className="lg:col-span-7 p-5 overflow-y-auto space-y-6 bg-white">
             {avisoPegado && (
               <div className="bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-xl px-4 py-2.5 text-xs font-bold shadow-xs">
                 {avisoPegado}
@@ -630,7 +566,7 @@ export default function VentanaCorrector({
                     />
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    Alcanza al menos <strong>Conseguido</strong> tanto en Comprensión como en Expresión escrita para iluminar las dos mitades del escudo y avanzar.
+                    Alcanza al menos <strong>Conseguido</strong> tanto en Comprensión como en Expresión escrita para desbloquear la siguiente pregunta.
                   </p>
                 </div>
 
@@ -1006,13 +942,6 @@ export default function VentanaCorrector({
               setRespResumen("");
               setEvaluacion(null);
               setPasoActual(0);
-              setGamificacion(
-                crearEstadoGamificacionInicial(
-                  preguntasLiterales.length,
-                  preguntasInferenciales.length,
-                  requiereResumen
-                )
-              );
             }}
             className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
           >

@@ -3,15 +3,6 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "../lib/supabase";
-import { ConfigMision, EstadoGamificacion } from "../types/gamificacion";
-import {
-  actualizarGamificacionTrasEvaluacion,
-  crearEstadoGamificacionInicial,
-  reconstruirGamificacionDesdeEvaluacion,
-} from "../lib/motorGamificacion";
-import PanelGamificacionAlumno from "../components/PanelGamificacionAlumno";
-import RutaEscudoDual from "../components/RutaEscudoDual";
-import BannerMisionColectiva from "../components/BannerMisionColectiva";
 
 const MAX_INTENTOS = 10;
 
@@ -93,7 +84,6 @@ interface Actividad {
   resumen_min_palabras?: number | null;
   resumen_modelo?: string | null;
   bloqueo_secuencial?: boolean | null;
-  config_mision?: ConfigMision | null;
 }
 
 interface CorreccionItem {
@@ -118,19 +108,12 @@ interface ResultadoCorreccion {
     total: number;
     paso_actual_etiqueta: string;
   };
-  gamificacion?: EstadoGamificacion;
 }
 
 type PasoSecuencial =
-  | { tipo: "literal"; indice: number; pregunta: Pregunta; etiqueta: string; estacionId: string }
-  | {
-      tipo: "inferencial";
-      indice: number;
-      pregunta: Pregunta;
-      etiqueta: string;
-      estacionId: string;
-    }
-  | { tipo: "resumen"; etiqueta: string; estacionId: string };
+  | { tipo: "literal"; indice: number; pregunta: Pregunta; etiqueta: string }
+  | { tipo: "inferencial"; indice: number; pregunta: Pregunta; etiqueta: string }
+  | { tipo: "resumen"; etiqueta: string };
 
 function contarPalabras(texto: string): number {
   const limpio = (texto || "").trim();
@@ -147,9 +130,6 @@ function VistaAlumnoContenido() {
   const [respInferenciales, setRespInferenciales] = useState<string[]>([]);
   const [respResumen, setRespResumen] = useState("");
   const [evaluacion, setEvaluacion] = useState<ResultadoCorreccion | null>(null);
-  const [gamificacion, setGamificacion] = useState<EstadoGamificacion>(() =>
-    crearEstadoGamificacionInicial(0, 0, false)
-  );
   const [intentos, setIntentos] = useState(0);
   const [superada, setSuperada] = useState(false);
   const [cargando, setCargando] = useState(false);
@@ -180,17 +160,15 @@ function VistaAlumnoContenido() {
           indice: i,
           pregunta: p,
           etiqueta: `Literal L${i + 1}`,
-          estacionId: `L-${i}`,
         })),
         ...(actividad.preguntas_inferenciales || []).map((p, i) => ({
           tipo: "inferencial" as const,
           indice: i,
           pregunta: p,
           etiqueta: `Inferencial I${i + 1}`,
-          estacionId: `I-${i}`,
         })),
         ...(requiereResumen
-          ? [{ tipo: "resumen" as const, etiqueta: "Resumen final", estacionId: "RES-0" }]
+          ? [{ tipo: "resumen" as const, etiqueta: "Resumen final" }]
           : []),
       ]
     : [];
@@ -305,10 +283,6 @@ function VistaAlumnoContenido() {
 
       const actTipada = act as Actividad;
       const esBloqueoActivo = actTipada.bloqueo_secuencial ?? true;
-      const litLen = (actTipada.preguntas_literales || []).length;
-      const infLen = (actTipada.preguntas_inferenciales || []).length;
-      const tieneRes = (Number(actTipada.resumen_min_palabras) || 0) > 0;
-
       setActividad(actTipada);
       setModoSecuencial(esBloqueoActivo);
 
@@ -329,25 +303,9 @@ function VistaAlumnoContenido() {
         setIntentos(entregaPrevia.intentos || 0);
         setSuperada(Boolean(entregaPrevia.superada));
 
-        if (evalPrevia?.gamificacion) {
-          setGamificacion(evalPrevia.gamificacion);
-        } else if (evalPrevia) {
-          setGamificacion(
-            reconstruirGamificacionDesdeEvaluacion({
-              esActividadOral: Boolean(actTipada.media_url),
-              correccionesLiterales: evalPrevia.correcciones_literales || [],
-              correccionesInferenciales: evalPrevia.correcciones_inferenciales || [],
-              correccionResumen: evalPrevia.correccion_resumen || null,
-              numLiterales: litLen,
-              numInferenciales: infLen,
-              tieneResumen: tieneRes,
-            })
-          );
-        } else {
-          setGamificacion(crearEstadoGamificacionInicial(litLen, infLen, tieneRes));
-        }
-
         if (evalPrevia && esBloqueoActivo) {
+          const litLen = (actTipada.preguntas_literales || []).length;
+          const infLen = (actTipada.preguntas_inferenciales || []).length;
           let primerPendiente = 0;
           let encontrado = false;
 
@@ -377,7 +335,7 @@ function VistaAlumnoContenido() {
               }
             }
           }
-          if (!encontrado && tieneRes) {
+          if (!encontrado && (Number(actTipada.resumen_min_palabras) || 0) > 0) {
             primerPendiente = litLen + infLen;
           }
           setPasoActual(primerPendiente);
@@ -389,7 +347,6 @@ function VistaAlumnoContenido() {
         setRespInferenciales((act.preguntas_inferenciales || []).map(() => ""));
         setRespResumen("");
         setPasoActual(0);
-        setGamificacion(crearEstadoGamificacionInicial(litLen, infLen, tieneRes));
       }
     } finally {
       setCargando(false);
@@ -524,18 +481,6 @@ function VistaAlumnoContenido() {
         ? "Listo para entregar"
         : pasosSecuenciales[siguientePasoIdx]?.etiqueta || "En curso";
 
-      const nuevaGamificacion = actualizarGamificacionTrasEvaluacion({
-        estadoAnterior: gamificacion,
-        estacionIdEvaluada: pasoObjetivo.estacionId,
-        esActividadOral: Boolean(actividad.media_url),
-        correccionesLiterales: nuevasLit,
-        correccionesInferenciales: nuevasInf,
-        correccionResumen: nuevoRes,
-        numLiterales: totalLit,
-        numInferenciales: totalInf,
-        tieneResumen: requiereResumen,
-      });
-
       const evaluacionActualizada: ResultadoCorreccion = {
         ...base,
         nivel_global: mediaGlobal,
@@ -549,7 +494,6 @@ function VistaAlumnoContenido() {
           total: totalPasos,
           paso_actual_etiqueta: etiquetaPasoActual,
         },
-        gamificacion: nuevaGamificacion,
       };
 
       await supabase.from("entregas").upsert(
@@ -561,7 +505,6 @@ function VistaAlumnoContenido() {
           nivel_comprension: compGlobal,
           nivel_expresion: exprGlobal,
           superada: false,
-          puntos_mision: nuevaGamificacion.puntosTotales,
           respuestas_literales: respLiterales,
           respuestas_inferenciales: respInferenciales,
           respuesta_resumen: requiereResumen ? respResumen : null,
@@ -571,7 +514,6 @@ function VistaAlumnoContenido() {
         { onConflict: "actividad_codigo,nombre_alumno" }
       );
 
-      setGamificacion(nuevaGamificacion);
       setEvaluacion(evaluacionActualizada);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error inesperado.";
@@ -658,17 +600,6 @@ function VistaAlumnoContenido() {
         dominadosFinal++;
       }
 
-      const nuevaGamificacion = actualizarGamificacionTrasEvaluacion({
-        estadoAnterior: gamificacion,
-        esActividadOral: Boolean(actividad.media_url),
-        correccionesLiterales: data.correcciones_literales || [],
-        correccionesInferenciales: data.correcciones_inferenciales || [],
-        correccionResumen: data.correccion_resumen || null,
-        numLiterales: totalLit,
-        numInferenciales: totalInf,
-        tieneResumen: requiereResumen,
-      });
-
       const evaluacionFinal: ResultadoCorreccion = {
         ...data,
         nivel_global: mediaGlobal,
@@ -679,7 +610,6 @@ function VistaAlumnoContenido() {
           total: totalPasos,
           paso_actual_etiqueta: estaSuperada ? "Completada" : "Revisión final",
         },
-        gamificacion: nuevaGamificacion,
       };
 
       const { error: errorUpsert } = await supabase.from("entregas").upsert(
@@ -691,7 +621,6 @@ function VistaAlumnoContenido() {
           nivel_comprension: compGlobal,
           nivel_expresion: exprGlobal,
           superada: estaSuperada,
-          puntos_mision: nuevaGamificacion.puntosTotales,
           respuestas_literales: respLiterales,
           respuestas_inferenciales: respInferenciales,
           respuesta_resumen: requiereResumen ? respResumen : null,
@@ -705,7 +634,6 @@ function VistaAlumnoContenido() {
         console.error("Error guardando entrega final en Supabase:", errorUpsert.message);
       }
 
-      setGamificacion(nuevaGamificacion);
       setIntentos(nuevoIntento);
       setEvaluacion(evaluacionFinal);
       setSuperada(estaSuperada);
@@ -938,26 +866,6 @@ function VistaAlumnoContenido() {
             )}
           </div>
         </div>
-
-        {/* Banner de Misión Colectiva si el docente la activó */}
-        <BannerMisionColectiva
-          codigoActividad={actividad.codigo}
-          mision={actividad.config_mision}
-        />
-
-        {/* Panel independiente de Gamificación del Alumno */}
-        <PanelGamificacionAlumno gamificacion={gamificacion} />
-
-        {/* Ruta visual con Escudo Dual */}
-        <RutaEscudoDual
-          estaciones={gamificacion.estaciones}
-          indiceActivo={indicePasoSeguro}
-          onSeleccionarEstacion={(idx) => {
-            if (!bloqueoSecuencial || idx <= maxPasoDesbloqueado) {
-              setPasoActual(idx);
-            }
-          }}
-        />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-5 h-fit">
