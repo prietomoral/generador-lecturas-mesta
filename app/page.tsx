@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import type { User } from "@supabase/supabase-js";
 import { FormLectura, ResultadoLectura, obtenerTemaAleatorio } from "./types/lectura";
 import { supabase } from "./lib/supabase";
@@ -290,11 +291,12 @@ export default function GeneradorLectura() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-16 print:bg-white print:pb-0">
       <header className="bg-gradient-to-r from-blue-800 via-blue-700 to-indigo-800 text-white shadow-md print:hidden">
-        <div className="max-w-4xl mx-auto px-6 py-8">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-            <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase">
+        <div className="max-w-4xl mx-auto px-6 pt-7 pb-11">
+          {/* Fila superior: Etiqueta institucional y sesión docente */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase border border-white/15">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              IESO Sierra la Mesta
+              IESO Sierra la Mesta · Santa Amalia
             </div>
 
             {/* Acceso docente con Google */}
@@ -340,16 +342,32 @@ export default function GeneradorLectura() {
             )}
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            DialectIA
-          </h1>
-          <p className="text-blue-100 text-sm sm:text-base font-medium mt-1">
-            Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
-          </p>
+          {/* Bloque principal: Logo en tarjeta blanca + Título DialectIA */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
+            <div className="bg-white rounded-2xl px-3.5 py-2.5 shadow-lg shadow-blue-950/25 border border-white/80 w-fit shrink-0">
+              <Image
+                src="/logo.jpg"
+                alt="Logo I.E.S.O. Sierra la Mesta - Santa Amalia"
+                width={150}
+                height={100}
+                priority
+                className="h-14 sm:h-16 w-auto object-contain"
+              />
+            </div>
+
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-none">
+                DialectIA
+              </h1>
+              <p className="text-blue-100 text-sm sm:text-base font-medium mt-1.5">
+                Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
+              </p>
+            </div>
+          </div>
 
           {/* Navegación Docente: Crear vs Biblioteca */}
           {usuarioDocente && (
-            <div className="flex gap-2 mt-5">
+            <div className="flex flex-wrap gap-2 mt-6">
               <button
                 type="button"
                 onClick={() => setPestanaPrincipal("crear")}

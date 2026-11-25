@@ -14,16 +14,23 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "DialectIA | IESO Sierra la Mesta — Programa NEXO",
-  description: "Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem) · IESO Sierra la Mesta",
+  description:
+    "Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem) · IESO Sierra la Mesta",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html
-      lang="en"
+      lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+        {children}
+      </body>
     </html>
   );
 }
