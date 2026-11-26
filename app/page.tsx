@@ -289,26 +289,26 @@ export default function GeneradorLectura() {
   const pdfActivo = form.modoOrigen === "subir" ? pdfPreviewUrl : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-16 print:bg-white print:pb-0">
-      <header className="bg-gradient-to-r from-blue-800 via-blue-700 to-indigo-800 text-white shadow-md print:hidden">
-        <div className="max-w-4xl mx-auto px-6 pt-7 pb-11">
+    <div className="min-h-screen bg-slate-100/80 text-slate-800 font-sans pb-20 antialiased print:bg-white print:pb-0">
+      <header className="bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white shadow-lg print:hidden">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-7 pb-14">
           {/* Fila superior: Etiqueta institucional y sesión docente */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase border border-white/15">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="inline-flex items-center gap-2.5 bg-white/12 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase border border-white/20 text-blue-50">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-xs shadow-emerald-400/50" />
               IESO Sierra la Mesta · Santa Amalia
             </div>
 
             {/* Acceso docente con Google */}
             {usuarioDocente ? (
-              <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/20 text-xs">
-                <span className="font-semibold text-blue-50 truncate max-w-[200px]">
+              <div className="flex items-center gap-2.5 bg-white/12 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/20 text-xs sm:text-sm">
+                <span className="font-semibold text-white truncate max-w-[220px]">
                   👤 {usuarioDocente.email}
                 </span>
                 <button
                   type="button"
                   onClick={cerrarSesionDocente}
-                  className="bg-white/20 hover:bg-white/30 text-white font-bold px-2.5 py-1 rounded-lg transition cursor-pointer"
+                  className="bg-white/20 hover:bg-white/30 text-white font-bold px-3 py-1 rounded-lg transition cursor-pointer"
                 >
                   Salir
                 </button>
@@ -317,9 +317,9 @@ export default function GeneradorLectura() {
               <button
                 type="button"
                 onClick={iniciarSesionGoogle}
-                className="inline-flex items-center gap-2 bg-white hover:bg-blue-50 text-slate-800 font-bold text-xs px-3.5 py-2 rounded-xl shadow-sm transition cursor-pointer"
+                className="inline-flex items-center gap-2.5 bg-white hover:bg-blue-50 text-slate-900 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
@@ -343,8 +343,8 @@ export default function GeneradorLectura() {
           </div>
 
           {/* Bloque principal: Logo en tarjeta blanca + Título DialectIA */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
-            <div className="bg-white rounded-2xl px-3.5 py-2.5 shadow-lg shadow-blue-950/25 border border-white/80 w-fit shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            <div className="bg-white rounded-2xl px-4 py-3 shadow-xl shadow-blue-950/30 border border-white/90 w-fit shrink-0">
               <Image
                 src="/logo.jpg"
                 alt="Logo I.E.S.O. Sierra la Mesta - Santa Amalia"
@@ -355,11 +355,11 @@ export default function GeneradorLectura() {
               />
             </div>
 
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-none">
+            <div className="space-y-1.5">
+              <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-none text-white">
                 DialectIA
               </h1>
-              <p className="text-blue-100 text-sm sm:text-base font-medium mt-1.5">
+              <p className="text-blue-100/95 text-sm sm:text-lg font-medium leading-snug">
                 Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
               </p>
             </div>
@@ -367,14 +367,14 @@ export default function GeneradorLectura() {
 
           {/* Navegación Docente: Crear vs Biblioteca */}
           {usuarioDocente && (
-            <div className="flex flex-wrap gap-2 mt-6">
+            <div className="flex flex-wrap gap-3 mt-7">
               <button
                 type="button"
                 onClick={() => setPestanaPrincipal("crear")}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition cursor-pointer ${
                   pestanaPrincipal === "crear"
-                    ? "bg-white text-blue-900 shadow-sm"
-                    : "bg-white/15 text-white hover:bg-white/25"
+                    ? "bg-white text-blue-950 shadow-md"
+                    : "bg-white/15 text-white hover:bg-white/25 border border-white/15"
                 }`}
               >
                 ✨ Crear / Editar Lectura
@@ -382,10 +382,10 @@ export default function GeneradorLectura() {
               <button
                 type="button"
                 onClick={() => setPestanaPrincipal("biblioteca")}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition cursor-pointer ${
                   pestanaPrincipal === "biblioteca"
-                    ? "bg-white text-indigo-900 shadow-sm"
-                    : "bg-white/15 text-white hover:bg-white/25"
+                    ? "bg-white text-indigo-950 shadow-md"
+                    : "bg-white/15 text-white hover:bg-white/25 border border-white/15"
                 }`}
               >
                 📚 Mi Biblioteca en la Nube
@@ -395,7 +395,7 @@ export default function GeneradorLectura() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 -mt-5 print:mt-0 print:px-0 print:max-w-none">
+      <main className="max-w-5xl mx-auto px-4 sm:px-8 -mt-7 print:mt-0 print:px-0 print:max-w-none">
         {usuarioDocente && pestanaPrincipal === "biblioteca" ? (
           <BibliotecaDocente
             docenteId={usuarioDocente.id}

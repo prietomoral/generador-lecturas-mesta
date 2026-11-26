@@ -293,63 +293,79 @@ export default function FormularioLectura({
   return (
     <form
       onSubmit={onSubmit}
-      className="bg-white rounded-2xl shadow-lg shadow-slate-200/70 border border-slate-200/80 p-6 sm:p-8 space-y-6 print:hidden"
+      className="bg-white rounded-3xl shadow-xl shadow-slate-300/40 border border-slate-200/90 p-6 sm:p-9 space-y-8 print:hidden"
     >
       {/* Selector de Origen */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 bg-slate-100 rounded-xl border border-slate-200/80">
-        <button
-          type="button"
-          onClick={() => setForm((prev) => ({ ...prev, modoOrigen: "generar" }))}
-          className={`py-2.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition cursor-pointer ${
-            modo === "generar"
-              ? "bg-white text-blue-700 shadow-sm ring-1 ring-slate-200"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          ✨ Generar lectura con IA
-        </button>
-        <button
-          type="button"
-          onClick={() => setForm((prev) => ({ ...prev, modoOrigen: "subir" }))}
-          className={`py-2.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition cursor-pointer ${
-            modo === "subir"
-              ? "bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          📄 Subir documento / texto
-        </button>
-        <button
-          type="button"
-          onClick={() => setForm((prev) => ({ ...prev, modoOrigen: "oral" }))}
-          className={`py-2.5 px-3 rounded-lg text-xs sm:text-sm font-bold transition cursor-pointer ${
-            modo === "oral"
-              ? "bg-white text-teal-700 shadow-sm ring-1 ring-slate-200"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          🎧 Comprensión Oral (Vídeo / Audio)
-        </button>
+      <div>
+        <span className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5">
+          Elige cómo quieres crear la actividad
+        </span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-2 bg-slate-100 rounded-2xl border border-slate-200">
+          <button
+            type="button"
+            onClick={() => setForm((prev) => ({ ...prev, modoOrigen: "generar" }))}
+            className={`py-3 px-4 rounded-xl text-left transition cursor-pointer ${
+              modo === "generar"
+                ? "bg-white text-blue-900 shadow-sm ring-2 ring-blue-600/25"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+            }`}
+          >
+            <div className="text-sm font-extrabold">✨ Generar con IA</div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              Crea un texto a medida por tema y nivel
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setForm((prev) => ({ ...prev, modoOrigen: "subir" }))}
+            className={`py-3 px-4 rounded-xl text-left transition cursor-pointer ${
+              modo === "subir"
+                ? "bg-white text-indigo-900 shadow-sm ring-2 ring-indigo-600/25"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+            }`}
+          >
+            <div className="text-sm font-extrabold">📄 Subir documento</div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              Importa PDF, Word o pega tu propio texto
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setForm((prev) => ({ ...prev, modoOrigen: "oral" }))}
+            className={`py-3 px-4 rounded-xl text-left transition cursor-pointer ${
+              modo === "oral"
+                ? "bg-white text-teal-900 shadow-sm ring-2 ring-teal-600/25"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+            }`}
+          >
+            <div className="text-sm font-extrabold">🎧 Comprensión Oral</div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              Desde vídeo de YouTube o archivo audio/vídeo
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Bloque 1: Nivel y Características */}
-      <div>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-          <span className="w-5 h-5 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
+      <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-5">
+        <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-2.5">
+          <span className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-extrabold shadow-xs">
             1
           </span>
           {modo === "generar"
-            ? "Nivel y estructura del texto"
-            : "Nivel del alumnado y dificultad de preguntas"}
+            ? "Nivel del alumnado y estructura del texto"
+            : "Nivel del alumnado y dificultad de las preguntas"}
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Edad / Nivel del alumnado
+            <label className="block text-sm font-bold text-slate-800 mb-2">
+              Edad / Nivel educativo
             </label>
             <select
-              className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3.5 py-2.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
+              className="w-full bg-white border border-slate-300 text-slate-900 text-base rounded-xl px-4 py-3 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
               value={form.edad}
               onChange={(e) => setForm({ ...form, edad: e.target.value })}
             >
@@ -363,13 +379,13 @@ export default function FormularioLectura({
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            <label className="block text-sm font-bold text-slate-800 mb-2">
               {modo === "generar"
                 ? "Complejidad léxica y sintáctica"
                 : "Complejidad de las preguntas"}
             </label>
             <select
-              className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3.5 py-2.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
+              className="w-full bg-white border border-slate-300 text-slate-900 text-base rounded-xl px-4 py-3 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
               value={form.dificultad}
               onChange={(e) => setForm({ ...form, dificultad: e.target.value })}
             >
@@ -386,11 +402,11 @@ export default function FormularioLectura({
           {modo === "generar" && (
             <>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                <label className="block text-sm font-bold text-slate-800 mb-2">
                   Tipología textual
                 </label>
                 <select
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3.5 py-2.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
+                  className="w-full bg-white border border-slate-300 text-slate-900 text-base rounded-xl px-4 py-3 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
                   value={form.tipoTextoSelect}
                   onChange={(e) => setForm({ ...form, tipoTextoSelect: e.target.value })}
                 >
@@ -406,7 +422,7 @@ export default function FormularioLectura({
                     type="text"
                     required
                     placeholder="Ej: Carta formal, diálogo teatral, fábula..."
-                    className="w-full border border-blue-300 bg-blue-50/50 text-sm rounded-xl px-3.5 py-2.5 mt-2.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
+                    className="w-full border border-blue-400 bg-white text-slate-900 text-base rounded-xl px-4 py-3 mt-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
                     value={form.tipoTextoOtro}
                     onChange={(e) => setForm({ ...form, tipoTextoOtro: e.target.value })}
                   />
@@ -414,10 +430,10 @@ export default function FormularioLectura({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                <label className="block text-sm font-bold text-slate-800 mb-2">
                   Extensión aproximada
                 </label>
-                <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+                <div className="grid grid-cols-3 gap-2 bg-slate-200/70 p-1.5 rounded-xl border border-slate-300/70">
                   {[
                     { label: "Corta", sub: "~125 pal.", val: "Corta (100 - 150 palabras)" },
                     { label: "Media", sub: "~300 pal.", val: "Media (250 - 350 palabras)" },
@@ -429,14 +445,14 @@ export default function FormularioLectura({
                         type="button"
                         key={op.label}
                         onClick={() => setForm({ ...form, extension: op.val })}
-                        className={`py-1.5 px-2 rounded-lg text-center transition-all cursor-pointer ${
+                        className={`py-2 px-2 rounded-lg text-center transition-all cursor-pointer ${
                           activo
-                            ? "bg-white text-blue-700 shadow-sm font-bold ring-1 ring-slate-200"
-                            : "text-slate-600 hover:text-slate-900 font-medium"
+                            ? "bg-white text-blue-800 shadow-sm font-extrabold ring-2 ring-blue-600/25"
+                            : "text-slate-700 hover:text-slate-950 font-semibold"
                         }`}
                       >
-                        <div className="text-xs sm:text-sm">{op.label}</div>
-                        <div className="text-[10px] opacity-75">{op.sub}</div>
+                        <div className="text-sm">{op.label}</div>
+                        <div className="text-xs opacity-80">{op.sub}</div>
                       </button>
                     );
                   })}
@@ -447,38 +463,36 @@ export default function FormularioLectura({
         </div>
       </div>
 
-      <hr className="border-slate-100" />
-
       {/* Bloque 2: Contenido Curricular O Documento Subido O Recurso Oral */}
-      <div>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-          <span className="w-5 h-5 rounded-md bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">
+      <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-5">
+        <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-2.5">
+          <span className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-extrabold shadow-xs">
             2
           </span>
           {modo === "oral"
             ? "Enlace o archivo de vídeo / audio (comprensión oral)"
             : modo === "subir"
             ? "Documento o texto propio"
-            : "Temática y currículo"}
+            : "Temática y contenidos curriculares"}
         </h2>
 
         {modo === "oral" ? (
-          <div className="space-y-4 bg-teal-50/50 border border-teal-200/80 rounded-2xl p-4 sm:p-5">
+          <div className="space-y-4 bg-teal-50/60 border border-teal-200 rounded-2xl p-4 sm:p-5">
             <div>
-              <div className="text-sm font-bold text-teal-950">
+              <div className="text-base font-bold text-teal-950">
                 Pega un enlace de YouTube/URL o sube un archivo de audio o vídeo
               </div>
-              <div className="text-xs text-slate-600 mt-0.5">
+              <div className="text-sm text-slate-700 mt-1 leading-relaxed">
                 Soporta enlaces de <strong>YouTube</strong> (con subtítulos) o archivos locales y enlaces directos{" "}
                 <strong>.mp3, .wav, .m4a, .ogg, .mp4, .webm</strong> (se optimizan automáticamente al subir).
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2.5">
               <input
                 type="text"
                 placeholder="https://www.youtube.com/watch?v=... o archivo seleccionado"
-                className="flex-1 bg-white border border-slate-300 text-slate-800 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600 transition"
+                className="flex-1 bg-white border border-slate-300 text-slate-900 text-base rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600 transition"
                 value={enlaceOralInput}
                 onChange={(e) => setEnlaceOralInput(e.target.value)}
               />
@@ -486,11 +500,11 @@ export default function FormularioLectura({
                 type="button"
                 disabled={extrayendoOral}
                 onClick={manejarExtraccionOral}
-                className="px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-600 disabled:bg-slate-400 text-white text-xs sm:text-sm font-bold shadow-xs transition cursor-pointer shrink-0"
+                className="px-4 py-3 rounded-xl bg-teal-700 hover:bg-teal-600 disabled:bg-slate-400 text-white text-sm font-bold shadow-xs transition cursor-pointer shrink-0"
               >
                 {extrayendoOral ? "⏳ Transcribiendo..." : "🎙️ Extraer enlace"}
               </button>
-              <label className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-xs transition cursor-pointer shrink-0 inline-flex items-center justify-center">
+              <label className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-xs transition cursor-pointer shrink-0 inline-flex items-center justify-center">
                 <span>{extrayendoOral ? "⏳..." : "📂 Subir audio / vídeo"}</span>
                 <input
                   type="file"
@@ -504,7 +518,7 @@ export default function FormularioLectura({
                 <button
                   type="button"
                   onClick={limpiarEnlaceOral}
-                  className="px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-xs font-bold text-slate-600 hover:text-rose-700 cursor-pointer"
+                  className="px-3.5 py-3 rounded-xl bg-white border border-slate-300 text-sm font-bold text-slate-700 hover:text-rose-700 cursor-pointer"
                 >
                   Quitar
                 </button>
@@ -512,16 +526,16 @@ export default function FormularioLectura({
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              <label className="block text-sm font-bold text-slate-800 mb-2">
                 Título de la actividad oral{" "}
-                <span className="text-slate-400 font-normal">
+                <span className="text-slate-500 font-normal">
                   (se rellena automáticamente al extraer, puedes editarlo)
                 </span>
               </label>
               <input
                 type="text"
                 placeholder="Ej: Documental sobre el Parque Nacional de Monfragüe"
-                className="w-full bg-white border border-slate-300 text-slate-800 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600 transition"
+                className="w-full bg-white border border-slate-300 text-slate-900 text-base rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600 transition"
                 value={form.tituloPropio || ""}
                 onChange={(e) => setForm({ ...form, tituloPropio: e.target.value })}
               />
@@ -532,10 +546,10 @@ export default function FormularioLectura({
                 <button
                   type="button"
                   onClick={() => setPestanaOral("reproductor")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold transition cursor-pointer ${
                     pestanaOral === "reproductor"
                       ? "bg-teal-700 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
+                      : "text-slate-700 hover:text-slate-950"
                   }`}
                 >
                   ▶️ Reproductor embebido
@@ -543,10 +557,10 @@ export default function FormularioLectura({
                 <button
                   type="button"
                   onClick={() => setPestanaOral("transcripcion")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold transition cursor-pointer ${
                     pestanaOral === "transcripcion"
                       ? "bg-teal-700 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
+                      : "text-slate-700 hover:text-slate-950"
                   }`}
                 >
                   📝 Transcripción extraída ({form.textoPropio?.length || 0} car.)
@@ -579,7 +593,7 @@ export default function FormularioLectura({
                     <audio controls src={form.mediaUrl} className="w-full" />
                   </div>
                 )}
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-600">
                   {form.textoPropio
                     ? "La transcripción ya está extraída en segundo plano para generar las preguntas y corregir al alumnado."
                     : "El vídeo está cargado. Pulsa en «Transcripción extraída» para pegar o escribir la transcripción."}
@@ -587,14 +601,14 @@ export default function FormularioLectura({
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Transcripción del vídeo o audio <span className="text-red-500">*</span>
+                <label className="block text-sm font-bold text-slate-800 mb-2">
+                  Transcripción del vídeo o audio <span className="text-red-600">*</span>
                 </label>
                 <textarea
                   rows={6}
                   required
                   placeholder="Aquí aparecerá automáticamente la transcripción extraída del vídeo o audio (también puedes pegarla o revisarla manualmente)..."
-                  className="w-full bg-white border border-slate-300 text-slate-800 text-sm leading-relaxed rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600 transition"
+                  className="w-full bg-white border border-slate-300 text-slate-900 text-base leading-7 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-600 transition"
                   value={form.textoPropio || ""}
                   onChange={(e) => setForm({ ...form, textoPropio: e.target.value })}
                 />
@@ -602,19 +616,19 @@ export default function FormularioLectura({
             )}
           </div>
         ) : modo === "subir" ? (
-          <div className="space-y-4 bg-indigo-50/40 border border-indigo-200/80 rounded-2xl p-4 sm:p-5">
+          <div className="space-y-4 bg-indigo-50/50 border border-indigo-200 rounded-2xl p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-sm font-bold text-indigo-950">
+                <div className="text-base font-bold text-indigo-950">
                   Importar archivo o pegar fragmento
                 </div>
-                <div className="text-xs text-slate-600">
+                <div className="text-sm text-slate-700 mt-0.5">
                   Soporta <strong>.pdf</strong> (con visor integrado), <strong>.docx</strong> (Word),{" "}
                   <strong>.txt</strong> y <strong>.md</strong>.
                 </div>
               </div>
 
-              <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition cursor-pointer">
+              <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-xs transition cursor-pointer">
                 <span>
                   {extrayendoArchivo ? "⏳ Extrayendo texto..." : "📂 Subir documento"}
                 </span>
@@ -629,7 +643,7 @@ export default function FormularioLectura({
             </div>
 
             {nombreArchivo && (
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-emerald-900 bg-emerald-50 border border-emerald-300 px-4 py-2.5 rounded-xl">
                 <span>
                   ✓ Archivo cargado: {nombreArchivo}{" "}
                   {extrayendoArchivo && "(extrayendo texto limpio en segundo plano...)"}
@@ -637,7 +651,7 @@ export default function FormularioLectura({
                 <button
                   type="button"
                   onClick={limpiarArchivoSubido}
-                  className="text-emerald-900 underline hover:text-rose-700 cursor-pointer"
+                  className="text-emerald-950 underline hover:text-rose-700 cursor-pointer"
                 >
                   Quitar
                 </button>
@@ -645,30 +659,30 @@ export default function FormularioLectura({
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              <label className="block text-sm font-bold text-slate-800 mb-2">
                 Título de la lectura{" "}
-                <span className="text-slate-400 font-normal">
+                <span className="text-slate-500 font-normal">
                   (opcional, si lo dejas vacío la IA creará uno)
                 </span>
               </label>
               <input
                 type="text"
                 placeholder="Ej: Capítulo 1 de El Lazarillo de Tormes"
-                className="w-full bg-white border border-slate-300 text-slate-800 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition"
+                className="w-full bg-white border border-slate-300 text-slate-900 text-base rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition"
                 value={form.tituloPropio || ""}
                 onChange={(e) => setForm({ ...form, tituloPropio: e.target.value })}
               />
             </div>
 
             {pdfPreviewUrl && (
-              <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-indigo-200/80 w-fit">
+              <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-indigo-200 w-fit">
                 <button
                   type="button"
                   onClick={() => setPestanaSubida("visor")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold transition cursor-pointer ${
                     pestanaSubida === "visor"
                       ? "bg-indigo-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
+                      : "text-slate-700 hover:text-slate-950"
                   }`}
                 >
                   📑 Visor PDF original (con imágenes y diseño)
@@ -676,10 +690,10 @@ export default function FormularioLectura({
                 <button
                   type="button"
                   onClick={() => setPestanaSubida("texto")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold transition cursor-pointer ${
                     pestanaSubida === "texto"
                       ? "bg-indigo-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
+                      : "text-slate-700 hover:text-slate-950"
                   }`}
                 >
                   📝 Texto extraído depurado ({form.textoPropio?.length || 0} car.)
@@ -696,20 +710,20 @@ export default function FormularioLectura({
                     className="w-full h-full"
                   />
                 </div>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-600">
                   Visualizando el documento PDF original. El texto se ha extraído y filtrado en segundo plano para elaborar las preguntas.
                 </p>
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Texto base para trabajar <span className="text-red-500">*</span>
+                <label className="block text-sm font-bold text-slate-800 mb-2">
+                  Texto base para trabajar <span className="text-red-600">*</span>
                 </label>
                 <textarea
                   rows={7}
                   required
                   placeholder="Aquí aparecerá el contenido extraído y depurado de tu PDF/Word, o puedes pegar directamente cualquier texto..."
-                  className="w-full bg-white border border-slate-300 text-slate-800 text-sm leading-relaxed rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition"
+                  className="w-full bg-white border border-slate-300 text-slate-900 text-base leading-7 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 transition"
                   value={form.textoPropio || ""}
                   onChange={(e) => setForm({ ...form, textoPropio: e.target.value })}
                 />
@@ -717,13 +731,13 @@ export default function FormularioLectura({
             )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <label className="block text-sm font-semibold text-slate-700">
-                  Tema principal de la lectura <span className="text-red-500">*</span>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label className="block text-sm font-bold text-slate-800">
+                  Tema principal de la lectura <span className="text-red-600">*</span>
                 </label>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() =>
@@ -732,7 +746,7 @@ export default function FormularioLectura({
                         tematica: obtenerTemaAleatorio(prev.tematica),
                       }))
                     }
-                    className="text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-lg transition cursor-pointer"
+                    className="text-xs sm:text-sm font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-xl transition cursor-pointer"
                   >
                     🎲 Otro tema aleatorio
                   </button>
@@ -740,7 +754,7 @@ export default function FormularioLectura({
                     <button
                       type="button"
                       onClick={() => setForm((prev) => ({ ...prev, tematica: "" }))}
-                      className="text-xs font-medium text-slate-500 hover:text-slate-800 px-2 py-1 rounded-lg transition cursor-pointer"
+                      className="text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 px-2.5 py-1.5 rounded-xl transition cursor-pointer"
                     >
                       Limpiar
                     </button>
@@ -751,21 +765,21 @@ export default function FormularioLectura({
                 type="text"
                 required
                 placeholder="Ej: La historia de Extremadura, el cambio climático, un misterio en el instituto..."
-                className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-4 py-2.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
+                className="w-full bg-white border border-slate-300 text-slate-900 text-base rounded-xl px-4 py-3 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
                 value={form.tematica}
                 onChange={(e) => setForm({ ...form, tematica: e.target.value })}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              <label className="block text-sm font-bold text-slate-800 mb-2">
                 Saberes básicos o contenidos relacionados{" "}
-                <span className="text-slate-400 font-normal">(opcional)</span>
+                <span className="text-slate-500 font-normal">(opcional)</span>
               </label>
               <input
                 type="text"
                 placeholder="Ej: Ecosistemas mediterráneos, tiempos verbales del pasado, fracciones..."
-                className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-4 py-2.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
+                className="w-full bg-white border border-slate-300 text-slate-900 text-base rounded-xl px-4 py-3 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 transition"
                 value={form.saberes}
                 onChange={(e) => setForm({ ...form, saberes: e.target.value })}
               />
@@ -774,64 +788,66 @@ export default function FormularioLectura({
         )}
       </div>
 
-      <hr className="border-slate-100" />
-
       {/* Bloque 3: Preguntas de Comprensión + Actividad final de resumen + Bloqueo secuencial */}
-      <div>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-          <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">
+      <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-5">
+        <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-2.5">
+          <span className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-extrabold shadow-xs">
             3
           </span>
           Batería de preguntas, resumen y modalidad de avance
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex items-center justify-between bg-slate-50 border border-slate-200/90 rounded-xl p-3.5">
+          <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
             <div>
-              <div className="text-sm font-semibold text-slate-800">Preguntas Literales</div>
-              <div className="text-xs text-slate-500">Información explícita en el contenido</div>
+              <div className="text-base font-bold text-slate-900">Preguntas Literales</div>
+              <div className="text-xs sm:text-sm text-slate-600 mt-0.5">
+                Información explícita en el texto
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => ajustarPreguntas("numLiterales", -1)}
-                className="w-8 h-8 rounded-lg bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 active:scale-95 transition cursor-pointer"
+                className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-300 text-slate-800 text-lg font-extrabold hover:bg-slate-200 active:scale-95 transition cursor-pointer"
               >
                 -
               </button>
-              <span className="w-6 text-center font-bold text-slate-800">
+              <span className="w-7 text-center text-lg font-extrabold text-slate-900">
                 {form.numLiterales}
               </span>
               <button
                 type="button"
                 onClick={() => ajustarPreguntas("numLiterales", 1)}
-                className="w-8 h-8 rounded-lg bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 active:scale-95 transition cursor-pointer"
+                className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-300 text-slate-800 text-lg font-extrabold hover:bg-slate-200 active:scale-95 transition cursor-pointer"
               >
                 +
               </button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between bg-slate-50 border border-slate-200/90 rounded-xl p-3.5">
+          <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
             <div>
-              <div className="text-sm font-semibold text-slate-800">Preguntas Inferenciales</div>
-              <div className="text-xs text-slate-500">Deducción e interpretación</div>
+              <div className="text-base font-bold text-slate-900">Preguntas Inferenciales</div>
+              <div className="text-xs sm:text-sm text-slate-600 mt-0.5">
+                Deducción e interpretación
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => ajustarPreguntas("numInferenciales", -1)}
-                className="w-8 h-8 rounded-lg bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 active:scale-95 transition cursor-pointer"
+                className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-300 text-slate-800 text-lg font-extrabold hover:bg-slate-200 active:scale-95 transition cursor-pointer"
               >
                 -
               </button>
-              <span className="w-6 text-center font-bold text-slate-800">
+              <span className="w-7 text-center text-lg font-extrabold text-slate-900">
                 {form.numInferenciales}
               </span>
               <button
                 type="button"
                 onClick={() => ajustarPreguntas("numInferenciales", 1)}
-                className="w-8 h-8 rounded-lg bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 active:scale-95 transition cursor-pointer"
+                className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-300 text-slate-800 text-lg font-extrabold hover:bg-slate-200 active:scale-95 transition cursor-pointer"
               >
                 +
               </button>
@@ -840,9 +856,9 @@ export default function FormularioLectura({
         </div>
 
         {/* Opción de actividad final: Redacción de resumen */}
-        <div className="mt-4 bg-amber-50/50 border border-amber-200/90 rounded-xl p-4 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="flex items-center gap-3 cursor-pointer">
+        <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <label className="flex items-start sm:items-center gap-3.5 cursor-pointer">
               <input
                 type="checkbox"
                 checked={Boolean(form.incluirResumen)}
@@ -853,21 +869,21 @@ export default function FormularioLectura({
                     minPalabrasResumen: form.minPalabrasResumen || 60,
                   })
                 }
-                className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                className="w-5 h-5 mt-0.5 sm:mt-0 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer shrink-0"
               />
               <div>
-                <div className="text-sm font-semibold text-slate-800">
+                <div className="text-base font-bold text-slate-900">
                   📝 Incluir actividad final: Redacción de resumen
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs sm:text-sm text-slate-600 mt-0.5">
                   Exige al alumnado redactar una síntesis con un número mínimo de palabras obligatorio
                 </div>
               </div>
             </label>
 
             {form.incluirResumen && (
-              <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg px-3 py-1.5">
-                <label className="text-xs font-bold text-amber-900">
+              <div className="flex items-center gap-2.5 bg-white border border-amber-300 rounded-xl px-3.5 py-2 shadow-2xs">
+                <label className="text-xs sm:text-sm font-bold text-amber-950">
                   Mínimo obligatorio:
                 </label>
                 <input
@@ -882,18 +898,18 @@ export default function FormularioLectura({
                       minPalabrasResumen: Math.max(10, Number(e.target.value) || 0),
                     })
                   }
-                  className="w-20 border border-slate-300 rounded-md px-2 py-1 text-sm font-bold text-center text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  className="w-20 border border-slate-300 rounded-lg px-2 py-1 text-base font-extrabold text-center text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                 />
-                <span className="text-xs font-medium text-slate-600">palabras</span>
+                <span className="text-xs sm:text-sm font-semibold text-slate-700">palabras</span>
               </div>
             )}
           </div>
         </div>
 
         {/* Opción de configuración docente: Bloqueo secuencial obligatorio */}
-        <div className="mt-3 bg-indigo-50/50 border border-indigo-200/90 rounded-xl p-4">
-          <label className="flex items-center justify-between gap-3 cursor-pointer">
-            <div className="flex items-center gap-3">
+        <div className="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-4 sm:p-5">
+          <label className="flex items-start sm:items-center justify-between gap-4 cursor-pointer">
+            <div className="flex items-start sm:items-center gap-3.5">
               <input
                 type="checkbox"
                 checked={bloqueoActivo}
@@ -903,13 +919,13 @@ export default function FormularioLectura({
                     bloqueo_secuencial: e.target.checked,
                   })
                 }
-                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                className="w-5 h-5 mt-0.5 sm:mt-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
               />
               <div>
-                <div className="text-sm font-semibold text-slate-800">
+                <div className="text-base font-bold text-slate-900">
                   🔒 Bloqueo secuencial obligatorio en el entrenador del alumnado
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs sm:text-sm text-slate-600 mt-0.5 leading-relaxed">
                   {bloqueoActivo
                     ? "Activado: el alumnado debe dominar cada pregunta (Comprensión y Expresión) antes de desbloquear la siguiente."
                     : "Desactivado: el alumnado puede responder libremente a todas las preguntas en el orden que prefiera."}
@@ -917,10 +933,10 @@ export default function FormularioLectura({
               </div>
             </div>
             <span
-              className={`text-xs font-extrabold px-3 py-1 rounded-full border shrink-0 ${
+              className={`text-xs sm:text-sm font-extrabold px-3.5 py-1.5 rounded-full border shrink-0 ${
                 bloqueoActivo
-                  ? "bg-indigo-100 text-indigo-900 border-indigo-300"
-                  : "bg-slate-100 text-slate-700 border-slate-300"
+                  ? "bg-indigo-100 text-indigo-950 border-indigo-300"
+                  : "bg-white text-slate-700 border-slate-300"
               }`}
             >
               {bloqueoActivo ? "🔒 Obligatorio" : "🔓 Libre"}
@@ -930,11 +946,11 @@ export default function FormularioLectura({
       </div>
 
       {/* Botón Generar */}
-      <div className="pt-2">
+      <div className="pt-1">
         <button
           type="submit"
           disabled={cargando || extrayendoArchivo || extrayendoOral}
-          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2.5 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 text-white text-base sm:text-lg font-extrabold py-4 px-6 rounded-2xl shadow-lg shadow-blue-700/25 transition-all flex items-center justify-center gap-3 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
         >
           {cargando ? (
             <>
@@ -946,7 +962,7 @@ export default function FormularioLectura({
                   ? "Creando preguntas sobre tu texto..."
                   : "Redactando lectura y preguntas..."}
               </span>
-              <span className="ml-1 bg-white/20 px-2.5 py-0.5 rounded-md text-xs font-mono">
+              <span className="ml-1 bg-white/20 px-3 py-1 rounded-lg text-xs font-mono">
                 {segundosRestantes}s
               </span>
             </>

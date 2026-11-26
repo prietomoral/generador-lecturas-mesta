@@ -668,21 +668,21 @@ function VistaAlumnoContenido() {
       calcularMediaNiveles(corr.nivel_comprension, corr.nivel_expresion);
 
     return (
-      <div className="space-y-2.5 pt-1">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <div className="bg-blue-50/80 border border-blue-200 rounded-lg p-3 flex flex-col justify-between gap-2.5 text-blue-950">
-            <div className="text-xs leading-relaxed">
+      <div className="space-y-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-blue-50/90 border border-blue-200 rounded-xl p-3.5 flex flex-col justify-between gap-3 text-blue-950">
+            <div className="text-xs sm:text-sm leading-relaxed">
               <strong className="block text-blue-900 mb-1">
                 🧭 {subtituloComp}
               </strong>
               <p>{corr.pista_comprension}</p>
             </div>
-            <div className="pt-2 border-t border-blue-200/80 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold text-blue-900">
+            <div className="pt-2.5 border-t border-blue-200/80 flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-blue-900">
                 Indicador de logro:
               </span>
               <span
-                className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
                   corr.nivel_comprension
                 )}`}
               >
@@ -691,19 +691,19 @@ function VistaAlumnoContenido() {
             </div>
           </div>
 
-          <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 flex flex-col justify-between gap-2.5 text-indigo-950">
-            <div className="text-xs leading-relaxed">
+          <div className="bg-indigo-50/90 border border-indigo-200 rounded-xl p-3.5 flex flex-col justify-between gap-3 text-indigo-950">
+            <div className="text-xs sm:text-sm leading-relaxed">
               <strong className="block text-indigo-900 mb-1">
                 ✍️ {subtituloExpr}
               </strong>
               <p>{corr.consejo_redaccion}</p>
             </div>
-            <div className="pt-2 border-t border-indigo-200/80 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold text-indigo-900">
+            <div className="pt-2.5 border-t border-indigo-200/80 flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-indigo-900">
                 Indicador de logro:
               </span>
               <span
-                className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
                   corr.nivel_expresion
                 )}`}
               >
@@ -713,12 +713,12 @@ function VistaAlumnoContenido() {
           </div>
         </div>
 
-        <div className="bg-slate-100/90 border border-slate-300 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs font-bold text-slate-700">
+        <div className="bg-slate-100 border border-slate-300 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs sm:text-sm font-bold text-slate-800">
             ⚖️ Valoración media de la respuesta (Comprensión + Expresión):
           </span>
           <span
-            className={`text-xs font-extrabold px-3 py-0.5 rounded-full border ${estiloNivel(
+            className={`text-xs font-extrabold px-3 py-1 rounded-full border ${estiloNivel(
               mediaItem
             )}`}
           >
@@ -731,56 +731,56 @@ function VistaAlumnoContenido() {
 
   if (!actividad) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-        <form
-          onSubmit={entrarActividad}
-          className="bg-white max-w-md w-full rounded-2xl shadow-lg border border-slate-200 p-6 space-y-4"
-        >
-          <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 block">
+      <div className="min-h-screen bg-[#f1f5f9] flex items-center justify-center p-4 sm:p-6">
+        <div className="bg-white max-w-md w-full rounded-3xl shadow-xl shadow-slate-300/50 border border-slate-200/90 overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-950 via-blue-900 to-indigo-900 px-7 py-6 text-white">
+            <span className="inline-block text-xs font-bold uppercase tracking-wider bg-white/15 border border-white/25 px-3 py-1 rounded-full mb-2">
               DialectIA · IESO Sierra la Mesta
             </span>
-            <span className="text-xs text-slate-500 block">
+            <p className="text-xs text-indigo-100/90 leading-relaxed">
               Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
-            </span>
+            </p>
           </div>
-          <h1 className="text-xl font-extrabold text-slate-900">
-            Acceder a la actividad de clase
-          </h1>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">
-              Código de la actividad
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Ej: MESTA-482"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value.toUpperCase())}
-              className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm uppercase font-mono"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">
-              Tu nombre y apellidos
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Ej: María García López"
-              value={nombreAlumno}
-              onChange={(e) => setNombreAlumno(e.target.value)}
-              className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={cargando}
-            className="w-full bg-indigo-700 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition cursor-pointer"
-          >
-            {cargando ? "Cargando actividad..." : "Entrar y comenzar"}
-          </button>
-        </form>
+
+          <form onSubmit={entrarActividad} className="p-7 space-y-5">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">
+              Acceder a la actividad de clase
+            </h1>
+            <div>
+              <label className="block text-sm font-bold text-slate-800 mb-1.5">
+                Código de la actividad
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Ej: MESTA-482"
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-base text-slate-900 uppercase font-mono font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-800 mb-1.5">
+                Tu nombre y apellidos
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Ej: María García López"
+                value={nombreAlumno}
+                onChange={(e) => setNombreAlumno(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-base text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={cargando}
+              className="w-full bg-indigo-700 hover:bg-indigo-600 text-white text-base font-extrabold py-3.5 rounded-xl shadow-md shadow-indigo-700/20 transition cursor-pointer"
+            >
+              {cargando ? "Cargando actividad..." : "Entrar y comenzar"}
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
@@ -799,33 +799,35 @@ function VistaAlumnoContenido() {
     ocupado || (pasoAEnviar?.tipo === "resumen" && !resumenCumpleMinimo);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
-      <div className="max-w-6xl mx-auto space-y-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+    <div className="min-h-screen bg-[#f1f5f9] p-4 sm:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-700 mb-0.5">
+            <div className="text-xs font-extrabold uppercase tracking-wider text-indigo-700 mb-1">
               DialectIA · IESO Sierra la Mesta · Programa NEXO (Educalectura-Educalem)
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs sm:text-sm text-slate-600 mb-1">
               Alumno/a: <strong className="text-slate-900">{nombreAlumno}</strong> · Código:{" "}
-              <span className="font-mono font-bold">{actividad.codigo}</span>
+              <span className="font-mono font-extrabold text-indigo-950">{actividad.codigo}</span>
             </div>
-            <h1 className="text-lg font-extrabold text-slate-900">{actividad.titulo}</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-snug">
+              {actividad.titulo}
+            </h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
             {bloqueoSecuencial ? (
-              <div className="inline-flex bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-[11px] font-bold">
+              <div className="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
                 <button
                   type="button"
                   onClick={() => {
                     setPasoActual(maxPasoDesbloqueado);
                     setModoSecuencial(true);
                   }}
-                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
                     modoSecuencial
                       ? "bg-indigo-700 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
+                      : "text-slate-700 hover:text-slate-950"
                   }`}
                 >
                   🎯 Paso a paso
@@ -833,34 +835,34 @@ function VistaAlumnoContenido() {
                 <button
                   type="button"
                   onClick={() => setModoSecuencial(false)}
-                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
                     !modoSecuencial
                       ? "bg-indigo-700 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
+                      : "text-slate-700 hover:text-slate-950"
                   }`}
                 >
                   📋 Todas las preguntas
                 </button>
               </div>
             ) : (
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300">
+              <span className="text-xs font-extrabold px-3.5 py-1.5 rounded-full bg-slate-100 text-slate-800 border border-slate-300">
                 🔓 Modo avance libre
               </span>
             )}
 
             <span
               title="Los intentos se contabilizan únicamente al realizar la entrega global"
-              className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-200"
+              className="text-xs font-extrabold px-3.5 py-1.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200"
             >
               Entregas globales: {intentos} / {MAX_INTENTOS}
             </span>
             {superada && (
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300">
+              <span className="text-xs font-extrabold px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300">
                 🏆 {mediaGlobalActual || "Conseguido"}
               </span>
             )}
             {sinIntentos && (
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-rose-100 text-rose-900 border border-rose-300">
+              <span className="text-xs font-extrabold px-3.5 py-1.5 rounded-full bg-rose-100 text-rose-950 border border-rose-300">
                 ⛔ Límite de 10 entregas alcanzado
               </span>
             )}
@@ -868,20 +870,20 @@ function VistaAlumnoContenido() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-5 h-fit">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-3xl p-6 h-fit shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
                 {actividad.media_url ? "Recurso audiovisual" : "Documento de lectura"}
               </h2>
               {!actividad.media_url && actividad.pdf_url && (
-                <div className="inline-flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px] font-bold">
+                <div className="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
                   <button
                     type="button"
                     onClick={() => setVistaLectura("original")}
-                    className={`px-2 py-1 rounded-md transition cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
                       vistaLectura === "original"
                         ? "bg-indigo-600 text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
+                        : "text-slate-700 hover:text-slate-950"
                     }`}
                   >
                     📑 Documento original
@@ -889,10 +891,10 @@ function VistaAlumnoContenido() {
                   <button
                     type="button"
                     onClick={() => setVistaLectura("texto")}
-                    className={`px-2 py-1 rounded-md transition cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
                       vistaLectura === "texto"
                         ? "bg-indigo-600 text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
+                        : "text-slate-700 hover:text-slate-950"
                     }`}
                   >
                     📝 Solo texto
@@ -904,7 +906,7 @@ function VistaAlumnoContenido() {
             {actividad.media_url ? (
               <div className="space-y-3">
                 {actividad.media_tipo === "youtube" && (
-                  <div className="w-full aspect-video rounded-xl overflow-hidden border border-slate-300 bg-black shadow-inner">
+                  <div className="w-full aspect-video rounded-2xl overflow-hidden border border-slate-300 bg-black shadow-inner">
                     <iframe
                       src={actividad.media_url}
                       title={actividad.titulo}
@@ -918,20 +920,20 @@ function VistaAlumnoContenido() {
                   <video
                     controls
                     src={actividad.media_url}
-                    className="w-full rounded-xl border border-slate-300 bg-black"
+                    className="w-full rounded-2xl border border-slate-300 bg-black"
                   />
                 )}
                 {actividad.media_tipo === "audio" && (
-                  <div className="bg-teal-50/70 border border-teal-200 rounded-xl p-4">
+                  <div className="bg-teal-50/70 border border-teal-200 rounded-2xl p-4">
                     <audio controls src={actividad.media_url} className="w-full" />
                   </div>
                 )}
-                <p className="text-xs text-slate-500">
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                   Escucha atentamente el audio o vídeo tantas veces como necesites antes de responder.
                 </p>
               </div>
             ) : actividad.pdf_url && vistaLectura === "original" ? (
-              <div className="w-full h-[520px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
+              <div className="w-full h-[540px] rounded-2xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
                 <iframe
                   src={`${actividad.pdf_url}#toolbar=1&navpanes=0`}
                   title={actividad.titulo}
@@ -939,9 +941,9 @@ function VistaAlumnoContenido() {
                 />
               </div>
             ) : (
-              <div className="space-y-3.5 text-sm leading-relaxed text-slate-800 text-justify">
+              <div className="space-y-4 text-base leading-7 text-slate-800 text-justify">
                 {parrafosTexto.map((parrafo, idx) => (
-                  <p key={idx} className="indent-3">
+                  <p key={idx} className="indent-4">
                     {parrafo}
                   </p>
                 ))}
@@ -949,9 +951,9 @@ function VistaAlumnoContenido() {
             )}
           </div>
 
-          <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-5 space-y-5">
+          <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-3xl p-6 space-y-6 shadow-sm">
             {avisoPegado && (
-              <div className="bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-xl px-4 py-2.5 text-xs font-bold shadow-xs">
+              <div className="bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-2xl px-4 py-3 text-xs sm:text-sm font-bold shadow-xs">
                 {avisoPegado}
               </div>
             )}
@@ -959,14 +961,14 @@ function VistaAlumnoContenido() {
             {/* Resultado final global cuando ya se ha realizado la entrega completa */}
             {evaluacion && (superada || (!bloqueoSecuencial && intentos > 0)) && (
               <div
-                className={`border-2 rounded-2xl p-4 space-y-2.5 ${
+                className={`border-2 rounded-2xl p-5 space-y-3 ${
                   superada
-                    ? "border-emerald-400 bg-emerald-50/60"
-                    : "border-amber-300 bg-amber-50/50"
+                    ? "border-emerald-400 bg-emerald-50/70"
+                    : "border-amber-300 bg-amber-50/60"
                 }`}
               >
                 <div
-                  className={`font-extrabold text-sm sm:text-base ${
+                  className={`font-extrabold text-base sm:text-lg ${
                     superada ? "text-emerald-950" : "text-amber-950"
                   }`}
                 >
@@ -974,17 +976,17 @@ function VistaAlumnoContenido() {
                     ? `🏆 Actividad entregada y superada (Entrega ${intentos} de ${MAX_INTENTOS})`
                     : `📊 Resultado de tu entrega global (Intento ${intentos} de ${MAX_INTENTOS})`}
                 </div>
-                <p className="text-sm leading-relaxed text-slate-700">
+                <p className="text-sm sm:text-base leading-relaxed text-slate-800">
                   {evaluacion.comentario_general}
                 </p>
-                <div className="flex flex-wrap gap-2 pt-1 text-xs font-bold">
-                  <span className="px-3 py-1 rounded-full bg-white border border-blue-300 text-blue-950">
+                <div className="flex flex-wrap gap-2.5 pt-1 text-xs font-extrabold">
+                  <span className="px-3.5 py-1 rounded-full bg-white border border-blue-300 text-blue-950">
                     1. Comprensión: {evaluacion.nivel_comprension_global}
                   </span>
-                  <span className="px-3 py-1 rounded-full bg-white border border-indigo-300 text-indigo-950">
+                  <span className="px-3.5 py-1 rounded-full bg-white border border-indigo-300 text-indigo-950">
                     2. Expresión: {evaluacion.nivel_expresion_global}
                   </span>
-                  <span className="px-3 py-1 rounded-full bg-white border border-slate-300 text-slate-900">
+                  <span className="px-3.5 py-1 rounded-full bg-white border border-slate-300 text-slate-900">
                     Media General: {mediaGlobalActual}
                   </span>
                 </div>
@@ -992,9 +994,9 @@ function VistaAlumnoContenido() {
             )}
 
             {bloqueoSecuencial && modoSecuencial && pasoActivo ? (
-              <div className="space-y-4">
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+              <div className="space-y-5">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-slate-800">
                     <span>
                       🎯 Avance secuencial obligatorio · Paso {indicePasoSeguro + 1} de{" "}
                       {pasosSecuenciales.length}
@@ -1003,7 +1005,7 @@ function VistaAlumnoContenido() {
                       {Math.round(((indicePasoSeguro + 1) / pasosSecuenciales.length) * 100)}%
                     </span>
                   </div>
-                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
                     <div
                       className="bg-indigo-600 h-full transition-all duration-300"
                       style={{
@@ -1011,17 +1013,17 @@ function VistaAlumnoContenido() {
                       }}
                     />
                   </div>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-xs text-slate-600 leading-relaxed">
                     Comprueba cada pregunta hasta alcanzar al menos <strong>Conseguido</strong> en Comprensión y Expresión escrita. Al terminar todas, pulsa <strong>Entregar actividad completa</strong>.
                   </p>
                 </div>
 
                 {pasoActivo.tipo === "literal" && (
-                  <div className="border-2 border-blue-200 rounded-2xl p-4 space-y-3 bg-blue-50/20">
-                    <span className="text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 inline-block px-3 py-1 rounded-lg">
+                  <div className="border-2 border-blue-200 rounded-2xl p-5 space-y-3.5 bg-blue-50/25">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-blue-900 bg-blue-100 inline-block px-3 py-1 rounded-xl">
                       Comprensión Literal · Pregunta {pasoActivo.indice + 1} de {totalLit}
                     </span>
-                    <label className="block text-base font-bold text-slate-900">
+                    <label className="block text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
                       L{pasoActivo.indice + 1}. {pasoActivo.pregunta.pregunta}
                     </label>
                     <textarea
@@ -1036,7 +1038,7 @@ function VistaAlumnoContenido() {
                         copia[pasoActivo.indice] = e.target.value;
                         setRespLiterales(copia);
                       }}
-                      className="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm disabled:bg-slate-100"
+                      className="w-full bg-white border border-slate-300 rounded-xl p-3.5 text-base leading-relaxed text-slate-900 disabled:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
                     />
                     {corrPasoActivo &&
                       renderBloqueFeedbackEstructurado(
@@ -1048,11 +1050,11 @@ function VistaAlumnoContenido() {
                 )}
 
                 {pasoActivo.tipo === "inferencial" && (
-                  <div className="border-2 border-indigo-200 rounded-2xl p-4 space-y-3 bg-indigo-50/20">
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-800 bg-indigo-100 inline-block px-3 py-1 rounded-lg">
+                  <div className="border-2 border-indigo-200 rounded-2xl p-5 space-y-3.5 bg-indigo-50/25">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-900 bg-indigo-100 inline-block px-3 py-1 rounded-xl">
                       Comprensión Inferencial · Pregunta {pasoActivo.indice + 1} de {totalInf}
                     </span>
-                    <label className="block text-base font-bold text-slate-900">
+                    <label className="block text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
                       I{pasoActivo.indice + 1}. {pasoActivo.pregunta.pregunta}
                     </label>
                     <textarea
@@ -1067,7 +1069,7 @@ function VistaAlumnoContenido() {
                         copia[pasoActivo.indice] = e.target.value;
                         setRespInferenciales(copia);
                       }}
-                      className="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm disabled:bg-slate-100"
+                      className="w-full bg-white border border-slate-300 rounded-xl p-3.5 text-base leading-relaxed text-slate-900 disabled:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
                     />
                     {corrPasoActivo &&
                       renderBloqueFeedbackEstructurado(
@@ -1079,15 +1081,15 @@ function VistaAlumnoContenido() {
                 )}
 
                 {pasoActivo.tipo === "resumen" && (
-                  <div className="border-2 border-amber-200 rounded-2xl p-4 space-y-3 bg-amber-50/30">
+                  <div className="border-2 border-amber-200 rounded-2xl p-5 space-y-3.5 bg-amber-50/35">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100 inline-block px-3 py-1 rounded-lg">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-amber-950 bg-amber-100 inline-block px-3 py-1 rounded-xl">
                         Actividad Final · Redacción de Resumen
                       </span>
                       <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                        className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
                           resumenCumpleMinimo
-                            ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                            ? "bg-emerald-100 text-emerald-950 border-emerald-300"
                             : "bg-amber-100 text-amber-950 border-amber-300"
                         }`}
                       >
@@ -1095,7 +1097,7 @@ function VistaAlumnoContenido() {
                         {resumenCumpleMinimo ? "✓" : `(faltan ${palabrasFaltantes})`}
                       </span>
                     </div>
-                    <label className="block text-base font-bold text-slate-900">
+                    <label className="block text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
                       Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
                       {minPalabrasResumen} palabras):
                     </label>
@@ -1107,10 +1109,10 @@ function VistaAlumnoContenido() {
                       placeholder={`Escribe aquí tu resumen con tus propias palabras (mínimo ${minPalabrasResumen} palabras, pegar deshabilitado)...`}
                       value={respResumen}
                       onChange={(e) => setRespResumen(e.target.value)}
-                      className="w-full bg-white border border-amber-300 rounded-xl p-3 text-sm leading-relaxed disabled:bg-slate-100"
+                      className="w-full bg-white border border-amber-300 rounded-xl p-3.5 text-base leading-relaxed text-slate-900 disabled:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-600"
                     />
                     {!bloqueado && !resumenCumpleMinimo && (
-                      <p className="text-xs font-semibold text-amber-900">
+                      <p className="text-xs sm:text-sm font-bold text-amber-950">
                         ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
                         {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar la comprobación.
                       </p>
@@ -1129,14 +1131,14 @@ function VistaAlumnoContenido() {
                     type="button"
                     disabled={indicePasoSeguro === 0}
                     onClick={() => setPasoActual((p) => Math.max(0, p - 1))}
-                    className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-slate-700 cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs sm:text-sm font-bold text-slate-800 cursor-pointer"
                   >
                     ⬅️ Pregunta anterior
                   </button>
 
                   {pasoActivoDominado ? (
                     esUltimoPaso ? (
-                      <div className="px-4 py-2 rounded-xl bg-emerald-100 border border-emerald-400 text-emerald-950 text-xs font-extrabold">
+                      <div className="px-4 py-2.5 rounded-xl bg-emerald-100 border border-emerald-400 text-emerald-950 text-xs sm:text-sm font-extrabold">
                         ✅ Todos los pasos dominados · Pulsa abajo para entregar
                       </div>
                     ) : (
@@ -1145,13 +1147,13 @@ function VistaAlumnoContenido() {
                         onClick={() =>
                           setPasoActual((p) => Math.min(maxPasoDesbloqueado, p + 1))
                         }
-                        className="px-5 py-2.5 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-extrabold shadow-sm transition cursor-pointer"
+                        className="px-5 py-2.5 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer"
                       >
                         ✅ Dominado · Siguiente pregunta ➡️
                       </button>
                     )
                   ) : (
-                    <span className="text-xs font-semibold text-slate-500">
+                    <span className="text-xs sm:text-sm font-semibold text-slate-600">
                       🔒 Alcanza <strong>Conseguido</strong> en Comprensión y Expresión para avanzar
                     </span>
                   )}
@@ -1160,16 +1162,16 @@ function VistaAlumnoContenido() {
             ) : (
               <>
                 {bloqueoSecuencial ? (
-                  <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl px-4 py-2.5 text-xs text-indigo-950 flex items-center justify-between gap-2">
+                  <div className="bg-indigo-50/80 border border-indigo-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-indigo-950 flex items-center justify-between gap-2">
                     <span>
                       🔒 <strong>Progreso secuencial activo:</strong> responde y domina cada pregunta en orden para desbloquear la siguiente.
                     </span>
-                    <span className="font-bold whitespace-nowrap">
+                    <span className="font-extrabold whitespace-nowrap">
                       Paso {maxPasoDesbloqueado + 1} / {pasosSecuenciales.length}
                     </span>
                   </div>
                 ) : (
-                  <div className="bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800">
+                  <div className="bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800">
                     🔓 <strong>Avance libre:</strong> puedes responder en el orden que prefieras, pedir revisión individual de cada pregunta sin gastar intentos y entregar al terminar.
                   </div>
                 )}
@@ -1186,22 +1188,22 @@ function VistaAlumnoContenido() {
                   return (
                     <div
                       key={`L-${idx}`}
-                      className={`border rounded-xl p-4 space-y-2.5 transition ${
+                      className={`border rounded-2xl p-4 sm:p-5 space-y-3 transition ${
                         desbloqueada
-                          ? "border-slate-200 bg-white"
-                          : "border-slate-200 bg-slate-100/80 opacity-70"
+                          ? "border-slate-200 bg-slate-50/40"
+                          : "border-slate-200 bg-slate-100/80 opacity-75"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <label className="block text-sm font-semibold text-slate-900">
+                        <label className="block text-base font-bold text-slate-900 leading-snug">
                           L{idx + 1}. {item.pregunta}
                         </label>
                         {dominada ? (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 shrink-0">
+                          <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300 shrink-0">
                             ✅ Dominada
                           </span>
                         ) : !desbloqueada ? (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 shrink-0">
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-200 text-slate-700 shrink-0">
                             🔒 Bloqueada
                           </span>
                         ) : !bloqueoSecuencial && !bloqueado ? (
@@ -1211,12 +1213,12 @@ function VistaAlumnoContenido() {
                             onClick={() =>
                               comprobarPasoIndividual(pasosSecuenciales[idxGlobal])
                             }
-                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 disabled:opacity-40 cursor-pointer shrink-0"
+                            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 disabled:opacity-40 cursor-pointer shrink-0"
                           >
                             🔍 Comprobar L{idx + 1}
                           </button>
                         ) : (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 shrink-0">
+                          <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-950 shrink-0">
                             ✍️ Activa
                           </span>
                         )}
@@ -1238,7 +1240,7 @@ function VistaAlumnoContenido() {
                           copia[idx] = e.target.value;
                           setRespLiterales(copia);
                         }}
-                        className="w-full border border-slate-300 rounded-lg p-2.5 text-sm disabled:bg-slate-200/70 disabled:cursor-not-allowed"
+                        className="w-full bg-white border border-slate-300 rounded-xl p-3 text-base leading-relaxed text-slate-900 disabled:bg-slate-200/70 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
                       />
                       {corr &&
                         renderBloqueFeedbackEstructurado(
@@ -1262,22 +1264,22 @@ function VistaAlumnoContenido() {
                   return (
                     <div
                       key={`I-${idx}`}
-                      className={`border rounded-xl p-4 space-y-2.5 transition ${
+                      className={`border rounded-2xl p-4 sm:p-5 space-y-3 transition ${
                         desbloqueada
-                          ? "border-slate-200 bg-white"
-                          : "border-slate-200 bg-slate-100/80 opacity-70"
+                          ? "border-slate-200 bg-slate-50/40"
+                          : "border-slate-200 bg-slate-100/80 opacity-75"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <label className="block text-sm font-semibold text-slate-900">
+                        <label className="block text-base font-bold text-slate-900 leading-snug">
                           I{idx + 1}. {item.pregunta}
                         </label>
                         {dominada ? (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 shrink-0">
+                          <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300 shrink-0">
                             ✅ Dominada
                           </span>
                         ) : !desbloqueada ? (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 shrink-0">
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-200 text-slate-700 shrink-0">
                             🔒 Bloqueada
                           </span>
                         ) : !bloqueoSecuencial && !bloqueado ? (
@@ -1287,12 +1289,12 @@ function VistaAlumnoContenido() {
                             onClick={() =>
                               comprobarPasoIndividual(pasosSecuenciales[idxGlobal])
                             }
-                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 disabled:opacity-40 cursor-pointer shrink-0"
+                            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 disabled:opacity-40 cursor-pointer shrink-0"
                           >
                             🔍 Comprobar I{idx + 1}
                           </button>
                         ) : (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 shrink-0">
+                          <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-950 shrink-0">
                             ✍️ Activa
                           </span>
                         )}
@@ -1314,7 +1316,7 @@ function VistaAlumnoContenido() {
                           copia[idx] = e.target.value;
                           setRespInferenciales(copia);
                         }}
-                        className="w-full border border-slate-300 rounded-lg p-2.5 text-sm disabled:bg-slate-200/70 disabled:cursor-not-allowed"
+                        className="w-full bg-white border border-slate-300 rounded-xl p-3 text-base leading-relaxed text-slate-900 disabled:bg-slate-200/70 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
                       />
                       {corr &&
                         renderBloqueFeedbackEstructurado(
@@ -1328,23 +1330,23 @@ function VistaAlumnoContenido() {
 
                 {requiereResumen && (
                   <div
-                    className={`border-2 rounded-xl p-4 space-y-2.5 transition ${
+                    className={`border-2 rounded-2xl p-4 sm:p-5 space-y-3 transition ${
                       resumenDesbloqueado
-                        ? "border-amber-200 bg-amber-50/30"
-                        : "border-slate-200 bg-slate-100/80 opacity-70"
+                        ? "border-amber-200 bg-amber-50/35"
+                        : "border-slate-200 bg-slate-100/80 opacity-75"
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-amber-950 bg-amber-100 px-3 py-1 rounded-xl">
                         Actividad Final · Redacción de Resumen (Obligatorio)
                       </span>
                       <div className="flex items-center gap-2">
                         <span
-                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                          className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
                             !resumenDesbloqueado
                               ? "bg-slate-200 text-slate-700 border-slate-300"
                               : resumenCumpleMinimo
-                              ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                              ? "bg-emerald-100 text-emerald-950 border-emerald-300"
                               : "bg-amber-100 text-amber-950 border-amber-300"
                           }`}
                         >
@@ -1361,7 +1363,7 @@ function VistaAlumnoContenido() {
                             onClick={() =>
                               comprobarPasoIndividual(pasosSecuenciales[indiceGlobalResumen])
                             }
-                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 disabled:opacity-40 cursor-pointer shrink-0"
+                            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 disabled:opacity-40 cursor-pointer shrink-0"
                           >
                             🔍 Comprobar resumen
                           </button>
@@ -1369,7 +1371,7 @@ function VistaAlumnoContenido() {
                       </div>
                     </div>
 
-                    <label className="block text-sm font-semibold text-slate-900">
+                    <label className="block text-base font-bold text-slate-900 leading-snug">
                       Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
                       {minPalabrasResumen} palabras):
                     </label>
@@ -1386,11 +1388,11 @@ function VistaAlumnoContenido() {
                       }
                       value={respResumen}
                       onChange={(e) => setRespResumen(e.target.value)}
-                      className="w-full bg-white border border-amber-300 rounded-lg p-3 text-sm leading-relaxed disabled:bg-slate-200/70 disabled:border-slate-300 disabled:cursor-not-allowed"
+                      className="w-full bg-white border border-amber-300 rounded-xl p-3.5 text-base leading-relaxed text-slate-900 disabled:bg-slate-200/70 disabled:border-slate-300 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-600"
                     />
 
                     {!bloqueado && resumenDesbloqueado && !resumenCumpleMinimo && (
-                      <p className="text-xs font-semibold text-amber-900">
+                      <p className="text-xs sm:text-sm font-bold text-amber-950">
                         ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
                         {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar la comprobación.
                       </p>
@@ -1409,14 +1411,14 @@ function VistaAlumnoContenido() {
 
             {/* Botonera inferior */}
             {!bloqueado && (
-              <div className="space-y-2.5 pt-1">
+              <div className="space-y-3 pt-2">
                 {bloqueoSecuencial ? (
                   !todosLosPasosDominados ? (
                     <button
                       type="button"
                       disabled={deshabilitarComprobarPaso}
                       onClick={() => comprobarPasoIndividual()}
-                      className="w-full py-3 rounded-xl bg-indigo-700 hover:bg-indigo-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-bold text-sm transition cursor-pointer"
+                      className="w-full py-3.5 rounded-xl bg-indigo-700 hover:bg-indigo-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-extrabold text-sm sm:text-base shadow-sm transition cursor-pointer"
                     >
                       {corrigiendoPaso
                         ? "Analizando esta respuesta..."
@@ -1427,12 +1429,12 @@ function VistaAlumnoContenido() {
                           } de ${pasosSecuenciales.length} (no gasta intentos)`}
                     </button>
                   ) : (
-                    <div className="flex flex-col sm:flex-row gap-2.5">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <button
                         type="button"
                         disabled={ocupado}
                         onClick={() => comprobarPasoIndividual()}
-                        className="sm:w-1/3 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 font-bold text-xs transition cursor-pointer"
+                        className="sm:w-1/3 py-3.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-800 font-bold text-xs sm:text-sm transition cursor-pointer"
                       >
                         {corrigiendoPaso ? "Revisando..." : "🔍 Revisar último paso"}
                       </button>
@@ -1440,7 +1442,7 @@ function VistaAlumnoContenido() {
                         type="button"
                         disabled={ocupado}
                         onClick={entregarActividadCompleta}
-                        className="sm:w-2/3 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 text-white font-extrabold text-sm shadow-sm transition cursor-pointer"
+                        className="sm:w-2/3 py-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 text-white font-extrabold text-sm sm:text-base shadow-sm transition cursor-pointer"
                       >
                         {enviandoGlobal
                           ? "Enviando entrega global al profesor..."
@@ -1455,7 +1457,7 @@ function VistaAlumnoContenido() {
                     type="button"
                     disabled={ocupado || !listoParaEntregar}
                     onClick={entregarActividadCompleta}
-                    className="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-extrabold text-sm shadow-sm transition cursor-pointer"
+                    className="w-full py-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-extrabold text-sm sm:text-base shadow-sm transition cursor-pointer"
                   >
                     {enviandoGlobal
                       ? "Enviando entrega global al profesor..."
@@ -1477,7 +1479,7 @@ function VistaAlumnoContenido() {
 
 export default function PaginaAlumno() {
   return (
-    <Suspense fallback={<div className="p-8 text-center">Cargando entrenador...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-slate-700 font-semibold">Cargando entrenador...</div>}>
       <VistaAlumnoContenido />
     </Suspense>
   );

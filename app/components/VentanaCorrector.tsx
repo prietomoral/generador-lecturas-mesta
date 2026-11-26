@@ -94,7 +94,6 @@ export default function VentanaCorrector({
   const [vistaLectura, setVistaLectura] = useState<"original" | "texto">("original");
   const [avisoPegado, setAvisoPegado] = useState<string | null>(null);
 
-  // Cuando bloqueoSecuencial es true, se fuerza el modo paso a paso bloqueado; si es false, empieza en vista libre
   const [modoSecuencial, setModoSecuencial] = useState(bloqueoSecuencial);
   const [pasoActual, setPasoActual] = useState(0);
 
@@ -327,21 +326,21 @@ export default function VentanaCorrector({
       calcularMediaNiveles(corr.nivel_comprension, corr.nivel_expresion);
 
     return (
-      <div className="space-y-2.5 pt-1">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <div className="bg-blue-50/80 border border-blue-200 rounded-lg p-3 flex flex-col justify-between gap-2.5 text-blue-950">
-            <div className="text-xs leading-relaxed">
+      <div className="space-y-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-blue-50/90 border border-blue-200 rounded-xl p-3.5 flex flex-col justify-between gap-3 text-blue-950">
+            <div className="text-xs sm:text-sm leading-relaxed">
               <strong className="block text-blue-900 mb-1">
                 🧭 {subtituloComp}
               </strong>
               <p>{corr.pista_comprension}</p>
             </div>
-            <div className="pt-2 border-t border-blue-200/80 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold text-blue-900">
+            <div className="pt-2.5 border-t border-blue-200/80 flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-blue-900">
                 Indicador de logro:
               </span>
               <span
-                className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
                   corr.nivel_comprension
                 )}`}
               >
@@ -350,19 +349,19 @@ export default function VentanaCorrector({
             </div>
           </div>
 
-          <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 flex flex-col justify-between gap-2.5 text-indigo-950">
-            <div className="text-xs leading-relaxed">
+          <div className="bg-indigo-50/90 border border-indigo-200 rounded-xl p-3.5 flex flex-col justify-between gap-3 text-indigo-950">
+            <div className="text-xs sm:text-sm leading-relaxed">
               <strong className="block text-indigo-900 mb-1">
                 ✍️ {subtituloExpr}
               </strong>
               <p>{corr.consejo_redaccion}</p>
             </div>
-            <div className="pt-2 border-t border-indigo-200/80 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold text-indigo-900">
+            <div className="pt-2.5 border-t border-indigo-200/80 flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-indigo-900">
                 Indicador de logro:
               </span>
               <span
-                className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
                   corr.nivel_expresion
                 )}`}
               >
@@ -372,12 +371,12 @@ export default function VentanaCorrector({
           </div>
         </div>
 
-        <div className="bg-slate-100/90 border border-slate-300 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs font-bold text-slate-700">
+        <div className="bg-slate-100 border border-slate-300 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs sm:text-sm font-bold text-slate-800">
             ⚖️ Valoración media de la respuesta (Comprensión + Expresión):
           </span>
           <span
-            className={`text-xs font-extrabold px-3 py-0.5 rounded-full border ${estiloNivel(
+            className={`text-xs font-extrabold px-3 py-1 rounded-full border ${estiloNivel(
               mediaItem
             )}`}
           >
@@ -395,33 +394,33 @@ export default function VentanaCorrector({
       : !resumenCumpleMinimo);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-5 print:hidden">
-      <div className="bg-white w-full max-w-6xl h-[92vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-5 print:hidden">
+      <div className="bg-white w-full max-w-6xl h-[92vh] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         {/* Cabecera de la Ventana */}
-        <div className="bg-indigo-900 text-white px-5 py-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="bg-gradient-to-r from-indigo-950 to-blue-900 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div>
-            <span className="text-[11px] uppercase tracking-wider font-bold text-indigo-200 block">
-              DialectIA · IESO Sierra la Mesta · Entrenador de Competencia Lingüística — Programa NEXO (Educalectura-Educalem)
+            <span className="text-xs uppercase tracking-wider font-bold text-indigo-200 block">
+              DialectIA · IESO Sierra la Mesta · Entrenador de Competencia Lingüística — Programa NEXO
             </span>
-            <h2 className="text-base sm:text-lg font-extrabold truncate">
+            <h2 className="text-base sm:text-xl font-extrabold truncate mt-0.5">
               Entrenamiento Interactivo: {titulo}
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {bloqueoSecuencial ? (
-              <span className="bg-indigo-950/80 border border-indigo-400/30 text-indigo-100 px-3 py-1 rounded-xl text-[11px] font-bold">
+              <span className="bg-white/15 border border-white/25 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold">
                 🔒 Bloqueo secuencial activo
               </span>
             ) : (
-              <div className="inline-flex bg-indigo-950/70 p-0.5 rounded-xl border border-indigo-400/30 text-[11px] font-bold">
+              <div className="inline-flex bg-black/25 p-1 rounded-xl border border-white/20 text-xs font-bold">
                 <button
                   type="button"
                   onClick={() => setModoSecuencial(true)}
-                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
                     modoSecuencial
                       ? "bg-white text-indigo-950 shadow-xs"
-                      : "text-indigo-200 hover:text-white"
+                      : "text-indigo-100 hover:text-white"
                   }`}
                 >
                   🎯 Paso a paso
@@ -429,10 +428,10 @@ export default function VentanaCorrector({
                 <button
                   type="button"
                   onClick={() => setModoSecuencial(false)}
-                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
                     !modoSecuencial
                       ? "bg-white text-indigo-950 shadow-xs"
-                      : "text-indigo-200 hover:text-white"
+                      : "text-indigo-100 hover:text-white"
                   }`}
                 >
                   📋 Vista libre
@@ -443,9 +442,9 @@ export default function VentanaCorrector({
             <button
               type="button"
               onClick={onCerrar}
-              className="px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs sm:text-sm font-bold transition cursor-pointer"
             >
-              ✕ Cerrar ventana
+              ✕ Cerrar
             </button>
           </div>
         </div>
@@ -453,20 +452,20 @@ export default function VentanaCorrector({
         {/* Cuerpo dividido en 2 columnas */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
           {/* Columna Izquierda */}
-          <div className="lg:col-span-5 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200 p-5 overflow-y-auto flex flex-col">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <div className="lg:col-span-5 bg-slate-50 border-b lg:border-b-0 lg:border-r border-slate-200 p-6 overflow-y-auto flex flex-col">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
                 {mediaUrl ? "Recurso audiovisual" : "Documento de lectura"}
               </h3>
               {!mediaUrl && pdfPreviewUrl && (
-                <div className="inline-flex bg-slate-200/80 p-0.5 rounded-lg text-[11px] font-bold">
+                <div className="inline-flex bg-slate-200/90 p-1 rounded-xl text-xs font-bold">
                   <button
                     type="button"
                     onClick={() => setVistaLectura("original")}
-                    className={`px-2 py-1 rounded-md transition cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
                       vistaLectura === "original"
                         ? "bg-indigo-600 text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
+                        : "text-slate-700 hover:text-slate-950"
                     }`}
                   >
                     📑 PDF original
@@ -474,10 +473,10 @@ export default function VentanaCorrector({
                   <button
                     type="button"
                     onClick={() => setVistaLectura("texto")}
-                    className={`px-2 py-1 rounded-md transition cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
                       vistaLectura === "texto"
                         ? "bg-indigo-600 text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
+                        : "text-slate-700 hover:text-slate-950"
                     }`}
                   >
                     📝 Texto
@@ -486,12 +485,14 @@ export default function VentanaCorrector({
               )}
             </div>
 
-            <h4 className="text-lg font-bold text-slate-900 mb-3">{titulo}</h4>
+            <h4 className="text-lg sm:text-xl font-extrabold text-slate-900 mb-4 leading-snug">
+              {titulo}
+            </h4>
 
             {mediaUrl ? (
               <div className="space-y-3">
                 {mediaTipo === "youtube" && (
-                  <div className="w-full aspect-video rounded-xl overflow-hidden border border-slate-300 bg-black shadow-inner">
+                  <div className="w-full aspect-video rounded-2xl overflow-hidden border border-slate-300 bg-black shadow-inner">
                     <iframe
                       src={mediaUrl}
                       title={titulo}
@@ -505,20 +506,20 @@ export default function VentanaCorrector({
                   <video
                     controls
                     src={mediaUrl}
-                    className="w-full rounded-xl border border-slate-300 bg-black"
+                    className="w-full rounded-2xl border border-slate-300 bg-black"
                   />
                 )}
                 {mediaTipo === "audio" && (
-                  <div className="bg-white border border-teal-200 rounded-xl p-4">
+                  <div className="bg-white border border-teal-200 rounded-2xl p-4">
                     <audio controls src={mediaUrl} className="w-full" />
                   </div>
                 )}
-                <p className="text-xs text-slate-500">
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                   Escucha o visualiza el fragmento tantas veces como necesites y responde a las actividades de la derecha.
                 </p>
               </div>
             ) : pdfPreviewUrl && vistaLectura === "original" ? (
-              <div className="flex-1 min-h-[360px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
+              <div className="flex-1 min-h-[360px] rounded-2xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner">
                 <iframe
                   src={`${pdfPreviewUrl}#toolbar=1&navpanes=0`}
                   title="PDF original en entrenador"
@@ -526,9 +527,9 @@ export default function VentanaCorrector({
                 />
               </div>
             ) : (
-              <div className="space-y-3 text-sm leading-relaxed text-slate-700 text-justify">
+              <div className="space-y-4 text-base leading-7 text-slate-800 text-justify">
                 {parrafosTexto.map((parrafo, idx) => (
-                  <p key={idx} className="indent-3">
+                  <p key={idx} className="indent-4">
                     {parrafo}
                   </p>
                 ))}
@@ -537,18 +538,18 @@ export default function VentanaCorrector({
           </div>
 
           {/* Columna Derecha */}
-          <div className="lg:col-span-7 p-5 overflow-y-auto space-y-6 bg-white">
+          <div className="lg:col-span-7 p-6 overflow-y-auto space-y-6 bg-white">
             {avisoPegado && (
-              <div className="bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-xl px-4 py-2.5 text-xs font-bold shadow-xs">
+              <div className="bg-rose-50 border-2 border-rose-300 text-rose-950 rounded-2xl px-4 py-3 text-xs sm:text-sm font-bold shadow-xs">
                 {avisoPegado}
               </div>
             )}
 
             {/* MODO SECUENCIAL POR DOMINIO */}
             {modoSecuencial && pasoActivo ? (
-              <div className="space-y-4">
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+              <div className="space-y-5">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-slate-800">
                     <span>
                       🎯 Avance secuencial por dominio · Paso {indicePasoSeguro + 1} de{" "}
                       {pasosSecuenciales.length}
@@ -557,7 +558,7 @@ export default function VentanaCorrector({
                       {Math.round(((indicePasoSeguro + 1) / pasosSecuenciales.length) * 100)}%
                     </span>
                   </div>
-                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
                     <div
                       className="bg-indigo-600 h-full transition-all duration-300"
                       style={{
@@ -565,17 +566,17 @@ export default function VentanaCorrector({
                       }}
                     />
                   </div>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-xs text-slate-600">
                     Alcanza al menos <strong>Conseguido</strong> tanto en Comprensión como en Expresión escrita para desbloquear la siguiente pregunta.
                   </p>
                 </div>
 
                 {pasoActivo.tipo === "literal" && (
-                  <div className="border-2 border-blue-200 rounded-2xl p-4 space-y-3 bg-blue-50/20">
-                    <span className="text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100 inline-block px-3 py-1 rounded-lg">
+                  <div className="border-2 border-blue-200 rounded-2xl p-5 space-y-3.5 bg-blue-50/25">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-blue-900 bg-blue-100 inline-block px-3 py-1 rounded-xl">
                       {pasoActivo.etiqueta}
                     </span>
-                    <label className="block text-base font-bold text-slate-900">
+                    <label className="block text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
                       {pasoActivo.indice + 1}. {pasoActivo.pregunta.pregunta}
                     </label>
                     <textarea
@@ -589,7 +590,7 @@ export default function VentanaCorrector({
                         copia[pasoActivo.indice] = e.target.value;
                         setRespLiterales(copia);
                       }}
-                      className="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
+                      className="w-full bg-white border border-slate-300 rounded-xl p-3.5 text-base leading-relaxed text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
                     />
                     {corrPasoActivo &&
                       renderBloqueFeedbackEstructurado(
@@ -601,11 +602,11 @@ export default function VentanaCorrector({
                 )}
 
                 {pasoActivo.tipo === "inferencial" && (
-                  <div className="border-2 border-indigo-200 rounded-2xl p-4 space-y-3 bg-indigo-50/20">
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-800 bg-indigo-100 inline-block px-3 py-1 rounded-lg">
+                  <div className="border-2 border-indigo-200 rounded-2xl p-5 space-y-3.5 bg-indigo-50/25">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-900 bg-indigo-100 inline-block px-3 py-1 rounded-xl">
                       {pasoActivo.etiqueta}
                     </span>
-                    <label className="block text-base font-bold text-slate-900">
+                    <label className="block text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
                       {pasoActivo.indice + 1}. {pasoActivo.pregunta.pregunta}
                     </label>
                     <textarea
@@ -619,7 +620,7 @@ export default function VentanaCorrector({
                         copia[pasoActivo.indice] = e.target.value;
                         setRespInferenciales(copia);
                       }}
-                      className="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
+                      className="w-full bg-white border border-slate-300 rounded-xl p-3.5 text-base leading-relaxed text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
                     />
                     {corrPasoActivo &&
                       renderBloqueFeedbackEstructurado(
@@ -631,15 +632,15 @@ export default function VentanaCorrector({
                 )}
 
                 {pasoActivo.tipo === "resumen" && (
-                  <div className="border-2 border-amber-200 rounded-2xl p-4 space-y-3 bg-amber-50/30">
+                  <div className="border-2 border-amber-200 rounded-2xl p-5 space-y-3.5 bg-amber-50/35">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100 inline-block px-3 py-1 rounded-lg">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-amber-950 bg-amber-100 inline-block px-3 py-1 rounded-xl">
                         {pasoActivo.etiqueta}
                       </span>
                       <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                        className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
                           resumenCumpleMinimo
-                            ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                            ? "bg-emerald-100 text-emerald-950 border-emerald-300"
                             : "bg-amber-100 text-amber-950 border-amber-300"
                         }`}
                       >
@@ -647,7 +648,7 @@ export default function VentanaCorrector({
                         {resumenCumpleMinimo ? "✓" : `(faltan ${palabrasFaltantes})`}
                       </span>
                     </div>
-                    <label className="block text-base font-bold text-slate-900">
+                    <label className="block text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
                       Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
                       {resumenMinPalabras} palabras):
                     </label>
@@ -658,10 +659,10 @@ export default function VentanaCorrector({
                       placeholder={`Escribe aquí tu resumen con tus propias palabras (mínimo ${resumenMinPalabras} palabras, pegar deshabilitado)...`}
                       value={respResumen}
                       onChange={(e) => setRespResumen(e.target.value)}
-                      className="w-full bg-white border border-amber-300 rounded-xl p-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-600"
+                      className="w-full bg-white border border-amber-300 rounded-xl p-3.5 text-base leading-relaxed text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-600"
                     />
                     {!resumenCumpleMinimo && (
-                      <p className="text-xs font-semibold text-amber-900">
+                      <p className="text-xs sm:text-sm font-bold text-amber-950">
                         ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
                         {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar la corrección.
                       </p>
@@ -681,14 +682,14 @@ export default function VentanaCorrector({
                     type="button"
                     disabled={indicePasoSeguro === 0}
                     onClick={() => setPasoActual((p) => Math.max(0, p - 1))}
-                    className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-slate-700 cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs sm:text-sm font-bold text-slate-800 cursor-pointer"
                   >
                     ⬅️ Pregunta anterior
                   </button>
 
                   {pasoActivoDominado ? (
                     esUltimoPaso ? (
-                      <div className="px-4 py-2 rounded-xl bg-emerald-100 border border-emerald-400 text-emerald-950 text-xs font-extrabold">
+                      <div className="px-4 py-2.5 rounded-xl bg-emerald-100 border border-emerald-400 text-emerald-950 text-xs sm:text-sm font-extrabold">
                         🏆 ¡Actividad completada con dominio en ambos indicadores!
                       </div>
                     ) : (
@@ -697,13 +698,13 @@ export default function VentanaCorrector({
                         onClick={() =>
                           setPasoActual((p) => Math.min(pasosSecuenciales.length - 1, p + 1))
                         }
-                        className="px-5 py-2.5 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-extrabold shadow-sm transition cursor-pointer"
+                        className="px-5 py-2.5 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs sm:text-sm font-extrabold shadow-sm transition cursor-pointer"
                       >
                         ✅ Dominado · Siguiente pregunta ➡️
                       </button>
                     )
                   ) : (
-                    <span className="text-xs font-semibold text-slate-500">
+                    <span className="text-xs sm:text-sm font-semibold text-slate-600">
                       🔒 Alcanza <strong>Conseguido</strong> en Comprensión y Expresión para avanzar
                     </span>
                   )}
@@ -718,31 +719,31 @@ export default function VentanaCorrector({
                     evaluacion.nivel_expresion_global
                   );
                   return (
-                    <div className="border-2 border-slate-300 bg-slate-50/70 rounded-2xl p-4 space-y-3">
-                      <h4 className="text-sm sm:text-base font-extrabold text-slate-900">
+                    <div className="border-2 border-slate-300 bg-slate-50/80 rounded-2xl p-5 space-y-3.5">
+                      <h4 className="text-base sm:text-lg font-extrabold text-slate-900">
                         Resultados Globales de la Actividad
                       </h4>
 
-                      <p className="text-sm leading-relaxed text-slate-700">
+                      <p className="text-sm sm:text-base leading-relaxed text-slate-700">
                         {evaluacion.comentario_general}
                       </p>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="bg-white border border-blue-200 rounded-xl p-3 flex flex-col justify-between gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div className="bg-white border border-blue-200 rounded-xl p-3.5 flex flex-col justify-between gap-2.5">
                           <div>
-                            <div className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
+                            <div className="text-xs font-extrabold uppercase tracking-wider text-blue-900">
                               1. {mediaUrl ? "Comprensión Oral" : "Comprensión Lectora"} (Fondo)
                             </div>
-                            <p className="text-xs text-slate-600 mt-0.5">
+                            <p className="text-xs sm:text-sm text-slate-600 mt-1">
                               Exactitud, localización y deducción de ideas del contenido.
                             </p>
                           </div>
-                          <div className="pt-2 border-t border-blue-100 flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold text-blue-900">
+                          <div className="pt-2.5 border-t border-blue-100 flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-blue-900">
                               Indicador:
                             </span>
                             <span
-                              className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                              className={`text-xs font-extrabold px-3 py-0.5 rounded-full border ${estiloNivel(
                                 evaluacion.nivel_comprension_global
                               )}`}
                             >
@@ -751,21 +752,21 @@ export default function VentanaCorrector({
                           </div>
                         </div>
 
-                        <div className="bg-white border border-indigo-200 rounded-xl p-3 flex flex-col justify-between gap-2">
+                        <div className="bg-white border border-indigo-200 rounded-xl p-3.5 flex flex-col justify-between gap-2.5">
                           <div>
-                            <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">
+                            <div className="text-xs font-extrabold uppercase tracking-wider text-indigo-900">
                               2. Expresión Escrita / Redacción (Forma)
                             </div>
-                            <p className="text-xs text-slate-600 mt-0.5">
+                            <p className="text-xs sm:text-sm text-slate-600 mt-1">
                               Ortografía, gramática, puntuación y coherencia textual.
                             </p>
                           </div>
-                          <div className="pt-2 border-t border-indigo-100 flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold text-indigo-900">
+                          <div className="pt-2.5 border-t border-indigo-100 flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-indigo-900">
                               Indicador:
                             </span>
                             <span
-                              className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${estiloNivel(
+                              className={`text-xs font-extrabold px-3 py-0.5 rounded-full border ${estiloNivel(
                                 evaluacion.nivel_expresion_global
                               )}`}
                             >
@@ -775,12 +776,12 @@ export default function VentanaCorrector({
                         </div>
                       </div>
 
-                      <div className="bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                      <div className="bg-white border-2 border-slate-300 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 block">
+                          <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-900 block">
                             Valoración General (Media de Comprensión y Expresión)
                           </span>
-                          <span className="text-[11px] text-slate-500">
+                          <span className="text-xs text-slate-600">
                             Calculada a partir de los dos indicadores independientes
                           </span>
                         </div>
@@ -797,8 +798,8 @@ export default function VentanaCorrector({
                 })()}
 
                 {preguntasLiterales.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-blue-800 bg-blue-100/70 inline-block px-3 py-1 rounded-lg">
+                  <div className="space-y-3.5">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-blue-900 bg-blue-100 inline-block px-3.5 py-1.5 rounded-xl">
                       1. Comprensión Literal
                     </h4>
                     {preguntasLiterales.map((item, idx) => {
@@ -806,9 +807,9 @@ export default function VentanaCorrector({
                       return (
                         <div
                           key={idx}
-                          className="border border-slate-200 rounded-xl p-3.5 space-y-2.5 bg-slate-50/40"
+                          className="border border-slate-200 rounded-2xl p-4 space-y-3 bg-slate-50/60"
                         >
-                          <label className="block text-sm font-semibold text-slate-900">
+                          <label className="block text-base font-bold text-slate-900 leading-snug">
                             {idx + 1}. {item.pregunta}
                           </label>
                           <textarea
@@ -822,7 +823,7 @@ export default function VentanaCorrector({
                               copia[idx] = e.target.value;
                               setRespLiterales(copia);
                             }}
-                            className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
+                            className="w-full bg-white border border-slate-300 rounded-xl p-3 text-base leading-relaxed text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
                           />
                           {corr &&
                             renderBloqueFeedbackEstructurado(
@@ -837,8 +838,8 @@ export default function VentanaCorrector({
                 )}
 
                 {preguntasInferenciales.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-800 bg-indigo-100/70 inline-block px-3 py-1 rounded-lg">
+                  <div className="space-y-3.5">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-indigo-900 bg-indigo-100 inline-block px-3.5 py-1.5 rounded-xl">
                       2. Comprensión Inferencial
                     </h4>
                     {preguntasInferenciales.map((item, idx) => {
@@ -846,9 +847,9 @@ export default function VentanaCorrector({
                       return (
                         <div
                           key={idx}
-                          className="border border-slate-200 rounded-xl p-3.5 space-y-2.5 bg-slate-50/40"
+                          className="border border-slate-200 rounded-2xl p-4 space-y-3 bg-slate-50/60"
                         >
-                          <label className="block text-sm font-semibold text-slate-900">
+                          <label className="block text-base font-bold text-slate-900 leading-snug">
                             {idx + 1}. {item.pregunta}
                           </label>
                           <textarea
@@ -862,7 +863,7 @@ export default function VentanaCorrector({
                               copia[idx] = e.target.value;
                               setRespInferenciales(copia);
                             }}
-                            className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
+                            className="w-full bg-white border border-slate-300 rounded-xl p-3 text-base leading-relaxed text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
                           />
                           {corr &&
                             renderBloqueFeedbackEstructurado(
@@ -877,15 +878,15 @@ export default function VentanaCorrector({
                 )}
 
                 {requiereResumen && (
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-100/80 inline-block px-3 py-1 rounded-lg">
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-950 bg-amber-100 inline-block px-3.5 py-1.5 rounded-xl">
                         3. Redacción de Resumen (Obligatorio)
                       </h4>
                       <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                        className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
                           resumenCumpleMinimo
-                            ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                            ? "bg-emerald-100 text-emerald-950 border-emerald-300"
                             : "bg-amber-100 text-amber-950 border-amber-300"
                         }`}
                       >
@@ -894,8 +895,8 @@ export default function VentanaCorrector({
                       </span>
                     </div>
 
-                    <div className="border-2 border-amber-200 rounded-xl p-3.5 space-y-2.5 bg-amber-50/30">
-                      <label className="block text-sm font-semibold text-slate-900">
+                    <div className="border-2 border-amber-200 rounded-2xl p-4 space-y-3 bg-amber-50/35">
+                      <label className="block text-base font-bold text-slate-900 leading-snug">
                         Redacta con tus propias palabras un resumen completo del texto (mínimo{" "}
                         {resumenMinPalabras} palabras):
                       </label>
@@ -907,11 +908,11 @@ export default function VentanaCorrector({
                         placeholder={`Escribe aquí tu resumen con tus propias palabras (debes alcanzar al menos ${resumenMinPalabras} palabras, pegar deshabilitado)...`}
                         value={respResumen}
                         onChange={(e) => setRespResumen(e.target.value)}
-                        className="w-full bg-white border border-amber-300 rounded-lg p-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-600"
+                        className="w-full bg-white border border-amber-300 rounded-xl p-3.5 text-base leading-relaxed text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-600"
                       />
 
                       {!resumenCumpleMinimo && (
-                        <p className="text-xs font-semibold text-amber-900">
+                        <p className="text-xs sm:text-sm font-bold text-amber-950">
                           ⚠️ Requisito obligatorio: escribe al menos {palabrasFaltantes}{" "}
                           {palabrasFaltantes === 1 ? "palabra más" : "palabras más"} para habilitar la corrección.
                         </p>
@@ -932,7 +933,7 @@ export default function VentanaCorrector({
         </div>
 
         {/* Pie de la Ventana con botones */}
-        <div className="bg-slate-100 border-t border-slate-200 px-5 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="bg-slate-100 border-t border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <button
             type="button"
             disabled={corrigiendo}
@@ -943,16 +944,16 @@ export default function VentanaCorrector({
               setEvaluacion(null);
               setPasoActual(0);
             }}
-            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+            className="px-4 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:text-slate-950 cursor-pointer"
           >
             Limpiar respuestas
           </button>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onCerrar}
-              className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer"
+              className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs sm:text-sm font-bold text-slate-800 cursor-pointer"
             >
               Volver a la lectura
             </button>
@@ -965,7 +966,7 @@ export default function VentanaCorrector({
                   ? `Completa el resumen (faltan ${palabrasFaltantes} palabras)`
                   : undefined
               }
-              className="px-6 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white text-sm font-bold shadow-sm transition cursor-pointer"
+              className="px-6 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-400 disabled:cursor-not-allowed text-white text-sm sm:text-base font-extrabold shadow-sm transition cursor-pointer"
             >
               {corrigiendo
                 ? "Analizando..."

@@ -270,8 +270,8 @@ export default function FichaLectura({
   ) => {
     const esLiteral = tipo === "literales";
     const estiloCajaEdicion = esLiteral
-      ? "border-blue-300 bg-blue-50/50"
-      : "border-indigo-300 bg-indigo-50/50";
+      ? "border-blue-300 bg-blue-50/60"
+      : "border-indigo-300 bg-indigo-50/60";
     const estiloBotonGuardar = esLiteral
       ? "bg-blue-700 hover:bg-blue-600"
       : "bg-indigo-700 hover:bg-indigo-600";
@@ -279,23 +279,23 @@ export default function FichaLectura({
     return (
       <>
         {lista.length === 0 ? (
-          <p className="text-xs text-slate-500 italic py-1 print:hidden">
+          <p className="text-sm text-slate-600 italic py-2 print:hidden">
             No hay preguntas en este bloque. Pulsa el botón de abajo para añadir una.
           </p>
         ) : (
-          <ol className="list-decimal pl-5 space-y-4">
+          <ol className="list-decimal pl-6 space-y-4">
             {lista.map((item, i) => {
               const enEdicion =
                 itemEditando?.tipo === tipo && itemEditando?.indice === i;
 
               return (
-                <li key={`${tipo}-${i}`} className="break-inside-avoid">
+                <li key={`${tipo}-${i}`} className="break-inside-avoid text-base text-slate-900">
                   {enEdicion ? (
                     <div
-                      className={`border-2 ${estiloCajaEdicion} rounded-xl p-4 space-y-3 print:hidden`}
+                      className={`border-2 ${estiloCajaEdicion} rounded-2xl p-5 space-y-4 print:hidden`}
                     >
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                        <label className="block text-sm font-bold text-slate-800 mb-1.5">
                           Enunciado de la pregunta
                         </label>
                         <textarea
@@ -303,11 +303,11 @@ export default function FichaLectura({
                           placeholder="Escribe aquí el enunciado..."
                           value={borradorPregunta}
                           onChange={(e) => setBorradorPregunta(e.target.value)}
-                          className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                          className="w-full bg-white border border-slate-300 rounded-xl p-3 text-base leading-relaxed text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-emerald-800 mb-1">
+                        <label className="block text-sm font-bold text-emerald-900 mb-1.5">
                           Respuesta modelo (para solucionario y entrenador IA)
                         </label>
                         <textarea
@@ -315,33 +315,33 @@ export default function FichaLectura({
                           placeholder="Escribe la respuesta esperada..."
                           value={borradorRespuesta}
                           onChange={(e) => setBorradorRespuesta(e.target.value)}
-                          className="w-full bg-white border border-emerald-200 rounded-lg p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                          className="w-full bg-white border border-emerald-300 rounded-xl p-3 text-base leading-relaxed text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                         />
                       </div>
                       <div className="flex items-center justify-between pt-1">
                         <button
                           type="button"
                           onClick={() => eliminarPregunta(tipo, i)}
-                          className="text-xs font-semibold text-rose-600 hover:text-rose-800 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 cursor-pointer"
+                          className="text-xs sm:text-sm font-bold text-rose-700 hover:text-rose-900 px-3 py-2 rounded-xl hover:bg-rose-50 cursor-pointer"
                         >
                           🗑️ Eliminar
                         </button>
                         <button
                           type="button"
                           onClick={guardarEdicionActual}
-                          className={`text-xs font-bold text-white px-4 py-1.5 rounded-lg shadow-xs cursor-pointer ${estiloBotonGuardar}`}
+                          className={`text-xs sm:text-sm font-extrabold text-white px-5 py-2 rounded-xl shadow-xs cursor-pointer ${estiloBotonGuardar}`}
                         >
                           ✓ Guardar pregunta
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="group flex items-start justify-between gap-3 rounded-xl p-1.5 -ml-1.5 hover:bg-slate-50 transition">
+                    <div className="group flex items-start justify-between gap-3 rounded-2xl p-2.5 -ml-2.5 hover:bg-slate-50 border border-transparent hover:border-slate-200/80 transition">
                       <div
                         onClick={() => iniciarEdicion(tipo, i)}
                         className="flex-1 cursor-pointer"
                       >
-                        <p className="font-medium text-slate-900">
+                        <p className="font-semibold text-base text-slate-900 leading-relaxed">
                           {item.pregunta || (
                             <span className="italic text-slate-400">
                               (Sin enunciado — haz clic para escribir)
@@ -349,10 +349,10 @@ export default function FichaLectura({
                           )}
                         </p>
                         {mostrarRespuestas && (
-                          <p className="text-emerald-800 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:hidden">
+                          <p className="text-emerald-950 text-sm sm:text-base mt-2.5 bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl leading-relaxed print:hidden">
                             <strong>Respuesta:</strong>{" "}
                             {item.respuesta || (
-                              <span className="italic text-emerald-700/70">
+                              <span className="italic text-emerald-800/70">
                                 Sin respuesta modelo
                               </span>
                             )}
@@ -360,11 +360,11 @@ export default function FichaLectura({
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0 print:hidden">
+                      <div className="flex items-center gap-1.5 shrink-0 print:hidden">
                         <button
                           type="button"
                           onClick={() => iniciarEdicion(tipo, i)}
-                          className="text-xs font-semibold text-slate-600 hover:text-indigo-700 bg-white border border-slate-200 hover:border-indigo-300 px-2.5 py-1 rounded-lg shadow-2xs cursor-pointer"
+                          className="text-xs font-bold text-slate-700 hover:text-indigo-800 bg-white border border-slate-300 hover:border-indigo-400 px-3 py-1.5 rounded-xl shadow-2xs cursor-pointer"
                         >
                           ✏️ Editar
                         </button>
@@ -372,7 +372,7 @@ export default function FichaLectura({
                           type="button"
                           onClick={() => eliminarPregunta(tipo, i)}
                           title="Eliminar pregunta"
-                          className="text-xs font-semibold text-slate-500 hover:text-rose-700 bg-white border border-slate-200 hover:border-rose-300 px-2 py-1 rounded-lg shadow-2xs cursor-pointer"
+                          className="text-xs font-bold text-slate-600 hover:text-rose-700 bg-white border border-slate-300 hover:border-rose-300 px-2.5 py-1.5 rounded-xl shadow-2xs cursor-pointer"
                         >
                           🗑️
                         </button>
@@ -390,14 +390,14 @@ export default function FichaLectura({
           </ol>
         )}
 
-        <div className="pt-1 print:hidden">
+        <div className="pt-2 print:hidden">
           <button
             type="button"
             onClick={() => anadirPreguntaManual(tipo)}
-            className={`text-xs font-bold px-3.5 py-2 rounded-lg border transition cursor-pointer ${
+            className={`text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl border transition cursor-pointer ${
               esLiteral
-                ? "bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200"
-                : "bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200"
+                ? "bg-blue-50 hover:bg-blue-100 text-blue-900 border-blue-200"
+                : "bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-200"
             }`}
           >
             {esLiteral ? "+ Añadir pregunta literal" : "+ Añadir pregunta inferencial"}
@@ -410,23 +410,23 @@ export default function FichaLectura({
   return (
     <section
       ref={seccionRef}
-      className="mt-8 bg-white p-6 sm:p-10 rounded-2xl shadow-lg shadow-slate-200/70 border border-slate-200/80 space-y-6 scroll-mt-6 print:mt-0 print:p-0 print:shadow-none print:border-none"
+      className="mt-8 bg-white p-6 sm:p-10 rounded-3xl shadow-xl shadow-slate-300/40 border border-slate-200/90 space-y-7 scroll-mt-6 print:mt-0 print:p-0 print:shadow-none print:border-none"
     >
       {/* Aviso visual de confirmación */}
       {avisoExito && (
-        <div className="flex items-center justify-between gap-3 bg-emerald-50 border border-emerald-300 text-emerald-900 px-4 py-3 rounded-xl shadow-sm print:hidden">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white text-xs font-bold">
+        <div className="flex items-center justify-between gap-3 bg-emerald-50 border border-emerald-300 text-emerald-950 px-5 py-3.5 rounded-2xl shadow-sm print:hidden">
+          <div className="flex items-center gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white text-xs font-bold">
               ✓
             </span>
-            <div className="text-sm">
+            <div className="text-sm leading-relaxed">
               <strong>¡Actividad lista!</strong> Puedes editar cualquier pregunta pulsando <strong>✏️ Editar</strong> o guardarla en tu biblioteca con <strong>📢 Guardar y compartir</strong>.
             </div>
           </div>
           <button
             type="button"
             onClick={onCerrarAviso}
-            className="text-emerald-700 hover:text-emerald-950 text-xs font-bold px-2 py-1 cursor-pointer"
+            className="text-emerald-800 hover:text-emerald-950 text-xs sm:text-sm font-bold px-2.5 py-1 cursor-pointer shrink-0"
           >
             Cerrar
           </button>
@@ -434,12 +434,12 @@ export default function FichaLectura({
       )}
 
       {/* Barra de herramientas superior */}
-      <div className="flex flex-wrap justify-between items-center gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 print:hidden">
-        <div className="flex flex-wrap items-center gap-2.5 text-sm text-slate-600">
+      <div className="flex flex-wrap justify-between items-center gap-3.5 bg-slate-100/80 p-4 rounded-2xl border border-slate-200 print:hidden">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-700">
           <div className="flex items-center gap-2">
             <span
-              className={`w-2.5 h-2.5 rounded-full ${
-                mostrarRespuestas ? "bg-emerald-500" : "bg-blue-500"
+              className={`w-3 h-3 rounded-full ${
+                mostrarRespuestas ? "bg-emerald-500" : "bg-blue-600"
               }`}
             />
             <span>
@@ -460,10 +460,10 @@ export default function FichaLectura({
                 })
               }
               title="Pulsa para alternar si el alumnado debe avanzar en orden obligatorio o libre"
-              className={`text-xs font-bold px-3 py-1 rounded-full border transition cursor-pointer ${
+              className={`text-xs font-extrabold px-3.5 py-1.5 rounded-full border transition cursor-pointer ${
                 bloqueoSecuencial
                   ? "bg-indigo-100 text-indigo-950 border-indigo-300 hover:bg-indigo-200/70"
-                  : "bg-slate-200/80 text-slate-800 border-slate-300 hover:bg-slate-300/70"
+                  : "bg-white text-slate-800 border-slate-300 hover:bg-slate-50"
               }`}
             >
               {bloqueoSecuencial ? "🔒 Avance secuencial obligatorio" : "🔓 Avance libre"}
@@ -471,14 +471,14 @@ export default function FichaLectura({
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5">
           <button
             type="button"
             onClick={() => setPanelRefinarAbierto(!panelRefinarAbierto)}
-            className={`text-sm px-4 py-2 rounded-lg font-bold shadow-sm transition cursor-pointer ${
+            className={`text-xs sm:text-sm px-4 py-2.5 rounded-xl font-bold shadow-2xs transition cursor-pointer ${
               panelRefinarAbierto
                 ? "bg-amber-600 text-white"
-                : "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300"
+                : "bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300"
             }`}
           >
             💬 {panelRefinarAbierto ? "Ocultar ajustes IA" : "Ajustar texto / preguntas IA"}
@@ -489,7 +489,7 @@ export default function FichaLectura({
               type="button"
               disabled={publicando}
               onClick={publicarParaClase}
-              className="text-sm bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition cursor-pointer"
+              className="text-xs sm:text-sm bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-extrabold shadow-xs transition cursor-pointer"
             >
               {publicando
                 ? "Guardando..."
@@ -506,7 +506,7 @@ export default function FichaLectura({
               if (editandoResumen) guardarEdicionResumen();
               onAbrirCorrector();
             }}
-            className="text-sm bg-indigo-700 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition cursor-pointer"
+            className="text-xs sm:text-sm bg-indigo-700 hover:bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-extrabold shadow-xs transition cursor-pointer"
           >
             ✍️ Probar corrección IA
           </button>
@@ -514,7 +514,7 @@ export default function FichaLectura({
           <button
             type="button"
             onClick={() => setMostrarRespuestas(!mostrarRespuestas)}
-            className="text-sm bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 px-3.5 py-2 rounded-lg font-medium transition cursor-pointer"
+            className="text-xs sm:text-sm bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 px-4 py-2.5 rounded-xl font-bold transition cursor-pointer"
           >
             {mostrarRespuestas ? "Ocultar Solucionario" : "Ver Solucionario"}
           </button>
@@ -526,7 +526,7 @@ export default function FichaLectura({
               if (editandoResumen) guardarEdicionResumen();
               setTimeout(() => window.print(), 50);
             }}
-            className="text-sm bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-semibold shadow-sm transition cursor-pointer"
+            className="text-xs sm:text-sm bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-xs transition cursor-pointer"
           >
             🖨️ Descargar PDF
           </button>
@@ -535,18 +535,18 @@ export default function FichaLectura({
 
       {/* PANEL DE ITERACIÓN / CONVERSACIÓN CON LA IA */}
       {panelRefinarAbierto && (
-        <div className="bg-amber-50/70 border-2 border-amber-200 rounded-2xl p-4 sm:p-5 space-y-3.5 print:hidden">
+        <div className="bg-amber-50/70 border-2 border-amber-200 rounded-2xl p-5 sm:p-6 space-y-4 print:hidden">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
                 Asistente de Edición Docente
               </span>
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
+              <h3 className="text-base sm:text-lg font-extrabold text-slate-900">
                 ¿Qué quieres ajustar en esta actividad?
               </h3>
             </div>
             {historialCambios.length > 0 && (
-              <span className="text-xs font-semibold bg-white border border-amber-200 text-amber-900 px-2.5 py-1 rounded-full">
+              <span className="text-xs font-bold bg-white border border-amber-200 text-amber-950 px-3 py-1 rounded-full">
                 {historialCambios.length}{" "}
                 {historialCambios.length === 1 ? "ajuste aplicado" : "ajustes aplicados"}
               </span>
@@ -554,11 +554,11 @@ export default function FichaLectura({
           </div>
 
           {historialCambios.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 text-xs">
+            <div className="flex flex-wrap gap-2 text-xs">
               {historialCambios.map((item, idx) => (
                 <span
                   key={idx}
-                  className="bg-white/90 border border-amber-200 text-slate-700 px-2.5 py-1 rounded-lg"
+                  className="bg-white border border-amber-200 text-slate-800 font-medium px-3 py-1 rounded-xl"
                 >
                   ✓ {item}
                 </span>
@@ -566,33 +566,33 @@ export default function FichaLectura({
             </div>
           )}
 
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {SUGERENCIAS_RAPIDAS.map((sug) => (
               <button
                 key={sug}
                 type="button"
                 disabled={refinando}
                 onClick={() => setInstruccion(sug)}
-                className="text-xs bg-white hover:bg-amber-100 text-amber-950 border border-amber-200 px-2.5 py-1 rounded-lg transition cursor-pointer disabled:opacity-50"
+                className="text-xs sm:text-sm font-medium bg-white hover:bg-amber-100 text-amber-950 border border-amber-200 px-3 py-1.5 rounded-xl transition cursor-pointer disabled:opacity-50"
               >
                 + {sug}
               </button>
             ))}
           </div>
 
-          <form onSubmit={manejarEnvioRefinamiento} className="flex flex-col sm:flex-row gap-2">
+          <form onSubmit={manejarEnvioRefinamiento} className="flex flex-col sm:flex-row gap-2.5">
             <input
               type="text"
               disabled={refinando}
               placeholder="Ej: Acorta el segundo párrafo, cambia el tono a más humorístico o añade un dato sobre Extremadura..."
               value={instruccion}
               onChange={(e) => setInstruccion(e.target.value)}
-              className="flex-1 bg-white border border-amber-300 text-slate-800 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+              className="flex-1 bg-white border border-amber-300 text-slate-900 text-base rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
             />
             <button
               type="submit"
               disabled={refinando || !instruccion.trim()}
-              className="bg-amber-700 hover:bg-amber-600 disabled:bg-slate-400 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-xs transition cursor-pointer shrink-0 flex items-center justify-center gap-2"
+              className="bg-amber-700 hover:bg-amber-600 disabled:bg-slate-400 text-white text-sm font-extrabold px-5 py-3 rounded-xl shadow-xs transition cursor-pointer shrink-0 flex items-center justify-center gap-2"
             >
               {refinando ? (
                 <>
@@ -645,21 +645,21 @@ export default function FichaLectura({
         </div>
 
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 text-slate-900 print:text-2xl print:mb-4">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-center mb-6 text-slate-900 leading-snug print:text-2xl print:mb-4">
             {resultado.titulo}
           </h2>
 
           {/* Selector entre Recurso Original y Texto */}
           {mostrarSelectorVista && (
-            <div className="flex justify-center mb-4 print:hidden">
-              <div className="inline-flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <div className="flex justify-center mb-5 print:hidden">
+              <div className="inline-flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
                 <button
                   type="button"
                   onClick={() => setVistaDocumento("original")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer ${
                     vistaDocumento === "original"
                       ? "bg-indigo-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
+                      : "text-slate-700 hover:text-slate-950"
                   }`}
                 >
                   {resultado.mediaUrl
@@ -669,10 +669,10 @@ export default function FichaLectura({
                 <button
                   type="button"
                   onClick={() => setVistaDocumento("texto")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer ${
                     vistaDocumento === "texto"
                       ? "bg-indigo-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
+                      : "text-slate-700 hover:text-slate-950"
                   }`}
                 >
                   {resultado.mediaUrl
@@ -685,9 +685,9 @@ export default function FichaLectura({
 
           {/* Reproductor Multimedia */}
           {resultado.mediaUrl && (!mostrarRespuestas || vistaDocumento === "original") && (
-            <div className="mb-4 print:hidden">
+            <div className="mb-5 print:hidden">
               {resultado.mediaTipo === "youtube" && (
-                <div className="w-full aspect-video max-h-[460px] rounded-xl overflow-hidden border border-slate-300 bg-black shadow-inner">
+                <div className="w-full aspect-video max-h-[460px] rounded-2xl overflow-hidden border border-slate-300 bg-black shadow-inner">
                   <iframe
                     src={resultado.mediaUrl}
                     title={resultado.titulo}
@@ -701,11 +701,11 @@ export default function FichaLectura({
                 <video
                   controls
                   src={resultado.mediaUrl}
-                  className="w-full max-h-[460px] rounded-xl border border-slate-300 bg-black"
+                  className="w-full max-h-[460px] rounded-2xl border border-slate-300 bg-black"
                 />
               )}
               {resultado.mediaTipo === "audio" && (
-                <div className="bg-teal-50/60 border border-teal-200 rounded-xl p-5">
+                <div className="bg-teal-50/70 border border-teal-200 rounded-2xl p-5">
                   <audio controls src={resultado.mediaUrl} className="w-full" />
                 </div>
               )}
@@ -714,7 +714,7 @@ export default function FichaLectura({
 
           {/* Visor PDF Original */}
           {!resultado.mediaUrl && pdfPreviewUrl && vistaDocumento === "original" && (
-            <div className="w-full h-[540px] rounded-xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner mb-4 print:hidden">
+            <div className="w-full h-[540px] rounded-2xl overflow-hidden border border-slate-300 bg-slate-200 shadow-inner mb-5 print:hidden">
               <iframe
                 src={`${pdfPreviewUrl}#toolbar=1&navpanes=0`}
                 title="Documento PDF original"
@@ -732,29 +732,29 @@ export default function FichaLectura({
                 : pdfPreviewUrl && vistaDocumento === "original"
                 ? "hidden print:block"
                 : "block"
-            } space-y-4 leading-relaxed text-base sm:text-lg text-slate-700 text-justify bg-slate-50/60 p-6 rounded-xl border border-slate-100 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black print:space-y-3`}
+            } space-y-5 leading-8 text-base sm:text-lg text-slate-800 text-justify bg-slate-50/80 p-6 sm:p-8 rounded-2xl border border-slate-200/80 print:bg-transparent print:p-0 print:border-none print:text-base print:leading-7 print:text-black print:space-y-3`}
           >
             {parrafosTexto.map((parrafo, idx) => (
-              <p key={idx} className="indent-4 sm:indent-6 print:indent-4">
+              <p key={idx} className="indent-5 sm:indent-7 print:indent-4">
                 {parrafo}
               </p>
             ))}
           </div>
         </div>
 
-        <hr className="border-slate-200 my-6 print:border-gray-300" />
+        <hr className="border-slate-200 my-8 print:border-gray-300" />
 
         {/* SECCIÓN 1: PREGUNTAS LITERALES */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-blue-700 bg-blue-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
+        <div className="space-y-4">
+          <h3 className="text-sm font-extrabold text-blue-900 bg-blue-100/80 border border-blue-200/80 inline-block px-3.5 py-1.5 rounded-xl uppercase tracking-wider print:bg-transparent print:border-none print:p-0 print:text-base print:text-black">
             1. Comprensión Literal
           </h3>
           {renderBloquePreguntas("literales", resultado.preguntas_literales || [])}
         </div>
 
         {/* SECCIÓN 2: PREGUNTAS INFERENCIALES */}
-        <div className="space-y-3 pt-6">
-          <h3 className="text-sm font-bold text-indigo-700 bg-indigo-50 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
+        <div className="space-y-4 pt-8">
+          <h3 className="text-sm font-extrabold text-indigo-900 bg-indigo-100/80 border border-indigo-200/80 inline-block px-3.5 py-1.5 rounded-xl uppercase tracking-wider print:bg-transparent print:border-none print:p-0 print:text-base print:text-black">
             2. Comprensión Inferencial
           </h3>
           {renderBloquePreguntas("inferenciales", resultado.preguntas_inferenciales || [])}
@@ -762,19 +762,19 @@ export default function FichaLectura({
 
         {/* SECCIÓN 3: ACTIVIDAD FINAL DE RESUMEN */}
         {tieneResumen ? (
-          <div className="space-y-3 pt-6 break-inside-avoid">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-bold text-amber-800 bg-amber-100/80 inline-block px-3 py-1 rounded-lg uppercase tracking-wider print:bg-transparent print:p-0 print:text-base print:text-black">
+          <div className="space-y-4 pt-8 break-inside-avoid">
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h3 className="text-sm font-extrabold text-amber-950 bg-amber-100/90 border border-amber-200 inline-block px-3.5 py-1.5 rounded-xl uppercase tracking-wider print:bg-transparent print:border-none print:p-0 print:text-base print:text-black">
                   3. Redacción de Resumen
                 </h3>
-                <span className="text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full print:border-gray-500 print:text-black">
+                <span className="text-xs sm:text-sm font-bold bg-amber-50 text-amber-950 border border-amber-300 px-3 py-1 rounded-full print:border-gray-500 print:text-black">
                   Mínimo obligatorio: {resultado.resumen_min_palabras} palabras
                 </span>
               </div>
 
               {!editandoResumen && (
-                <div className="flex items-center gap-1 print:hidden">
+                <div className="flex items-center gap-1.5 print:hidden">
                   <button
                     type="button"
                     onClick={() => {
@@ -782,7 +782,7 @@ export default function FichaLectura({
                       setBorradorResumenModelo(resultado.resumen_modelo || "");
                       setEditandoResumen(true);
                     }}
-                    className="text-xs font-semibold text-slate-600 hover:text-amber-800 bg-white border border-slate-200 hover:border-amber-300 px-2.5 py-1 rounded-lg cursor-pointer"
+                    className="text-xs font-bold text-slate-700 hover:text-amber-900 bg-white border border-slate-300 hover:border-amber-400 px-3 py-1.5 rounded-xl cursor-pointer"
                   >
                     ✏️ Configurar resumen
                   </button>
@@ -790,7 +790,7 @@ export default function FichaLectura({
                     type="button"
                     onClick={quitarResumenDeFicha}
                     title="Quitar actividad de resumen"
-                    className="text-xs font-semibold text-slate-500 hover:text-rose-700 bg-white border border-slate-200 hover:border-rose-300 px-2 py-1 rounded-lg cursor-pointer"
+                    className="text-xs font-bold text-slate-600 hover:text-rose-700 bg-white border border-slate-300 hover:border-rose-300 px-2.5 py-1.5 rounded-xl cursor-pointer"
                   >
                     🗑️
                   </button>
@@ -799,9 +799,9 @@ export default function FichaLectura({
             </div>
 
             {editandoResumen ? (
-              <div className="border-2 border-amber-300 bg-amber-50/40 rounded-xl p-4 space-y-3 print:hidden">
+              <div className="border-2 border-amber-300 bg-amber-50/50 rounded-2xl p-5 space-y-4 print:hidden">
                 <div className="flex flex-wrap items-center gap-3">
-                  <label className="text-xs font-bold text-slate-800">
+                  <label className="text-sm font-bold text-slate-800">
                     Número mínimo de palabras obligatorio:
                   </label>
                   <input
@@ -811,13 +811,13 @@ export default function FichaLectura({
                     step={5}
                     value={borradorMinPalabras}
                     onChange={(e) => setBorradorMinPalabras(Number(e.target.value))}
-                    className="w-24 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm font-bold text-center text-slate-900"
+                    className="w-24 bg-white border border-slate-300 rounded-xl px-3 py-2 text-base font-extrabold text-center text-slate-900"
                   />
-                  <span className="text-xs text-slate-600">palabras</span>
+                  <span className="text-sm font-semibold text-slate-700">palabras</span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-emerald-800 mb-1">
+                  <label className="block text-sm font-bold text-emerald-900 mb-1.5">
                     Resumen modelo / ideas clave esperadas (para solucionario y entrenador IA)
                   </label>
                   <textarea
@@ -825,7 +825,7 @@ export default function FichaLectura({
                     placeholder="Escribe el resumen de referencia o las ideas principales que debe recoger el alumnado..."
                     value={borradorResumenModelo}
                     onChange={(e) => setBorradorResumenModelo(e.target.value)}
-                    className="w-full bg-white border border-emerald-200 rounded-lg p-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="w-full bg-white border border-emerald-300 rounded-xl p-3 text-base leading-relaxed text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                   />
                 </div>
 
@@ -833,14 +833,14 @@ export default function FichaLectura({
                   <button
                     type="button"
                     onClick={quitarResumenDeFicha}
-                    className="text-xs font-semibold text-rose-600 hover:text-rose-800 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 cursor-pointer"
+                    className="text-xs sm:text-sm font-bold text-rose-700 hover:text-rose-900 px-3 py-2 rounded-xl hover:bg-rose-50 cursor-pointer"
                   >
                     🗑️ Quitar actividad de resumen
                   </button>
                   <button
                     type="button"
                     onClick={guardarEdicionResumen}
-                    className="text-xs font-bold text-white bg-amber-700 hover:bg-amber-600 px-4 py-1.5 rounded-lg shadow-xs cursor-pointer"
+                    className="text-xs sm:text-sm font-extrabold text-white bg-amber-700 hover:bg-amber-600 px-5 py-2 rounded-xl shadow-xs cursor-pointer"
                   >
                     ✓ Guardar configuración
                   </button>
@@ -848,18 +848,18 @@ export default function FichaLectura({
               </div>
             ) : (
               <div>
-                <p className="font-medium text-slate-900">
+                <p className="font-semibold text-base text-slate-900 leading-relaxed">
                   Redacta con tus propias palabras un resumen completo que recoja las ideas principales del texto (extensión mínima obligatoria:{" "}
                   <strong>{resultado.resumen_min_palabras} palabras</strong>).
                 </p>
 
                 {mostrarRespuestas && (
-                  <div className="text-emerald-900 text-sm mt-2 bg-emerald-50 border border-emerald-200/70 p-3 rounded-lg print:hidden">
+                  <div className="text-emerald-950 text-sm sm:text-base mt-3 bg-emerald-50 border border-emerald-200 p-4 rounded-xl leading-relaxed print:hidden">
                     <strong>Resumen modelo de referencia:</strong>{" "}
                     {resultado.resumen_modelo ? (
                       resultado.resumen_modelo
                     ) : (
-                      <span className="italic text-emerald-700/80">
+                      <span className="italic text-emerald-800/80">
                         El entrenador IA evaluará la fidelidad a las ideas principales del texto y comprobará el mínimo de {resultado.resumen_min_palabras} palabras.
                       </span>
                     )}
@@ -878,11 +878,11 @@ export default function FichaLectura({
             )}
           </div>
         ) : (
-          <div className="pt-4 print:hidden">
+          <div className="pt-5 print:hidden">
             <button
               type="button"
               onClick={activarResumenEnFicha}
-              className="text-xs font-bold px-3.5 py-2 rounded-lg border bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-200 transition cursor-pointer"
+              className="text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl border bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-200 transition cursor-pointer"
             >
               + Añadir actividad final: Redacción de resumen
             </button>
