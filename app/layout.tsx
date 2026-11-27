@@ -42,7 +42,7 @@ export default function RootLayout({
               <strong className="font-semibold text-slate-800">
                 Desarrollo y Programación (asistida por IA Gemini):
               </strong>{" "}
-              Luis Prieto
+              Luis J. Prieto Moral
             </p>
             <p className="text-[11px] font-semibold text-indigo-800/80">
               IESO Sierra la Mesta · Noviembre 2026

@@ -761,16 +761,24 @@ function VistaAlumnoContenido() {
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-800 mb-1.5">
-                Tu nombre y apellidos
+                Tu apodo
               </label>
               <input
                 type="text"
                 required
-                placeholder="Ej: María García López"
+                placeholder="Ej: LectorVeloz24"
                 value={nombreAlumno}
                 onChange={(e) => setNombreAlumno(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-base text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600"
               />
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-medium text-amber-950 bg-amber-50 border border-amber-300 rounded-xl px-3.5 py-2.5 leading-relaxed">
+                  🛡️ <strong>Usa solo un alias:</strong> No escribas en ningún caso tu nombre real, apellidos ni datos personales (usa un apodo inventado).
+                </p>
+                <p className="text-xs font-medium text-indigo-950 bg-indigo-50 border border-indigo-200 rounded-xl px-3.5 py-2.5 leading-relaxed">
+                  🧭 <strong>Esto es un entrenamiento, no un examen:</strong> Los consejos y el nivel de logro que te muestre la IA sirven únicamente para ayudarte a mejorar tu comprensión lectora y no cuentan para tu nota.
+                </p>
+              </div>
             </div>
             <button
               type="submit"
@@ -807,7 +815,7 @@ function VistaAlumnoContenido() {
               DialectIA · IESO Sierra la Mesta · Programa NEXO (Educalectura-Educalem)
             </div>
             <div className="text-xs sm:text-sm text-slate-600 mb-1">
-              Alumno/a: <strong className="text-slate-900">{nombreAlumno}</strong> · Código:{" "}
+              Apodo: <strong className="text-slate-900">{nombreAlumno}</strong> · Código:{" "}
               <span className="font-mono font-extrabold text-indigo-950">{actividad.codigo}</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-snug">
