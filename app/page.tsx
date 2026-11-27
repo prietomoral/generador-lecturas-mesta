@@ -395,7 +395,12 @@ export default function GeneradorLectura() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-8 -mt-7 print:mt-0 print:px-0 print:max-w-none">
+      <main className="max-w-5xl mx-auto px-4 sm:px-8 -mt-7 space-y-6 print:mt-0 print:px-0 print:max-w-none print:space-y-0">
+        {/* Aviso legal y pedagógico del panel docente */}
+        <div className="bg-amber-50 border-2 border-amber-300/90 text-amber-950 rounded-2xl px-5 py-4 shadow-md shadow-slate-300/40 text-xs sm:text-sm leading-relaxed print:hidden">
+          ⚖️ <strong>Aviso legal y pedagógico:</strong> Esta herramienta es un asistente de práctica formativa diseñada exclusivamente para el entrenamiento autónomo de la comprensión lectora. Los indicadores de desempeño y orientaciones generados por la inteligencia artificial tienen carácter meramente informativo y no pueden utilizarse en ningún caso como instrumento de calificación ni para fundamentar decisiones de evaluación académica (Art. 22 RGPD y Anexo III del Reglamento de IA). Para garantizar la privacidad del alumnado, el sistema opera sin recogida de datos identificativos; queda prohibida la introducción de nombres reales, correos electrónicos o cualquier dato personal.
+        </div>
+
         {usuarioDocente && pestanaPrincipal === "biblioteca" ? (
           <BibliotecaDocente
             docenteId={usuarioDocente.id}
